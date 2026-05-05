@@ -3,11 +3,11 @@ services:
     image: heeyoon1302/happyprocess:latest
     env_file:
       - .env
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      JWT_SECRET: "dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBIUzI1NiBhbGdvcml0aG0h"
+      JWT_ACCESS_EXPIRATION: "3600000"
+      JWT_REFRESH_EXPIRATION: "1209600000"
     ports:
       - "8080:8080"
     restart: always

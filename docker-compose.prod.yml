@@ -1,6 +1,8 @@
 services:
   app:
     image: heeyoon1302/happyprocess:latest
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
     ports:

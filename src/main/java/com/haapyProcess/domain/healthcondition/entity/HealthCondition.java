@@ -3,14 +3,14 @@ package com.haapyProcess.domain.healthcondition.entity;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.condition.entity.Condition;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "HEALTH_CONDITION")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class HealthCondition {
 
     @Id

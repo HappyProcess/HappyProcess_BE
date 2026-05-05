@@ -4,9 +4,7 @@ import com.haapyProcess.domain.alert.entity.Alert;
 import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.location.entity.Location;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +12,9 @@ import java.util.List;
 @Entity
 @Table(name = "MEMBER")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Member {
 
     @Id
@@ -37,12 +37,14 @@ public class Member {
     @Column(name = "COMMUTE_TIME", length = 5)
     private String commuteTime;
 
+    @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
     private List<Location> locations = new ArrayList<>();
 
     @OneToOne(mappedBy = "member", cascade = CascadeType.ALL)
     private Alert alert;
 
+    @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
     private List<HealthCondition> healthConditions = new ArrayList<>();
 }

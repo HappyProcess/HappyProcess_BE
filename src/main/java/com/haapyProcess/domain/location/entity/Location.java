@@ -2,15 +2,15 @@ package com.haapyProcess.domain.location.entity;
 
 import com.haapyProcess.domain.member.entity.Member;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "LOCATION")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Location {
 
     @Id

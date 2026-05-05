@@ -35,16 +35,6 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
 
-      - name: application-prod.yml 생성
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.GCP_HOST }}
-          username: ${{ secrets.GCP_USERNAME }}
-          key: ${{ secrets.GCP_SSH_KEY }}
-          script: |
-            mkdir -p /home/${{ secrets.GCP_USERNAME }}/config
-            echo "${{ secrets.APPLICATION_PROD_YML }}" > /home/${{ secrets.GCP_USERNAME }}/config/application-prod.yml
-
       - name: GCP 서버에 배포
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -52,5 +42,20 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
+            cat > ~/docker-compose.prod.yml << 'EOF'
+            services:
+              app:
+                image: ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
+                environment:
+                  SPRING_PROFILES_ACTIVE: prod
+                  SPRING_DATASOURCE_URL: jdbc:mysql://34.50.59.40:3306/happy-process-mysql
+                  SPRING_DATASOURCE_USERNAME: root
+                  SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                  SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+                  SPRING_JPA_HIBERNATE_DDL_AUTO: update
+                ports:
+                  - "8080:8080"
+                restart: always
+            EOF
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
             docker compose -f ~/docker-compose.prod.yml up -d

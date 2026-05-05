@@ -40,3 +40,6 @@ out/
 ### Secret ###
 src/main/resources/application.yml
 
+## docker
+docker-compose.yml
+

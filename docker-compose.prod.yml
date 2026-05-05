@@ -5,9 +5,6 @@ services:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      JWT_SECRET: "dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBIUzI1NiBhbGdvcml0aG0h"
-      JWT_ACCESS_EXPIRATION: "3600000"
-      JWT_REFRESH_EXPIRATION: "1209600000"
     ports:
       - "8080:8080"
     restart: always

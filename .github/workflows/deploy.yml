@@ -1,0 +1,56 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v3
+
+      - name: JDK 17 설치
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: gradlew 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: 빌드
+        run: ./gradlew build -x test
+
+      - name: Docker Hub 로그인
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: 도커 이미지 빌드 & 푸시
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
+
+      - name: application-prod.yml 생성
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            mkdir -p /home/${{ secrets.GCP_USERNAME }}/config
+            echo "${{ secrets.APPLICATION_PROD_YML }}" > /home/${{ secrets.GCP_USERNAME }}/config/application-prod.yml
+
+      - name: GCP 서버에 배포
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USERNAME }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
+            docker compose -f ~/docker-compose.prod.yml up -d

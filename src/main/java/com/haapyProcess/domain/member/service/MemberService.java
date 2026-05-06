@@ -72,18 +72,16 @@ public class MemberService {
             locationRepository.save(location);
         }
 
-        if (request.getConditionIds() != null && !request.getConditionIds().isEmpty()) {
-            List<Condition> conditions = conditionRepository.findAllById(request.getConditionIds());
-            if (conditions.size() != request.getConditionIds().size()) {
-                throw new CustomException(ErrorCode.CONDITION_NOT_FOUND);
-            }
-            for (Condition condition : conditions) {
-                HealthCondition hc = HealthCondition.builder()
-                        .member(member)
-                        .condition(condition)
-                        .build();
-                healthConditionRepository.save(hc);
-            }
+        List<Condition> conditions = conditionRepository.findAllById(request.getConditionIds());
+        if (conditions.size() != request.getConditionIds().size()) {
+            throw new CustomException(ErrorCode.CONDITION_NOT_FOUND);
+        }
+        for (Condition condition : conditions) {
+            HealthCondition hc = HealthCondition.builder()
+                    .member(member)
+                    .condition(condition)
+                    .build();
+            healthConditionRepository.save(hc);
         }
 
         return new SignUpResponse(member.getMemberId());

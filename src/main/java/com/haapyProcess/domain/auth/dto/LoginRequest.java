@@ -7,11 +7,13 @@ import lombok.Getter;
 @Getter
 public class LoginRequest {
 
-    @Schema(description = "로그인 아이디", example = "user1234")
+    @Schema(description = "로그인 아이디", example = "user1234",
+            requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
     @NotBlank
     private String loginId;
 
-    @Schema(description = "비밀번호", example = "Pass1234!")
+    @Schema(description = "비밀번호", example = "Pass1234!",
+            requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
     @NotBlank
     private String password;
 }

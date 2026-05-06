@@ -14,7 +14,8 @@ public enum ErrorCode {
     INVALID_CITY(HttpStatus.BAD_REQUEST, "지원하지 않는 도시명입니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
-    CONDITION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 질환 ID가 포함되어 있습니다.");
+    CONDITION_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 질환 ID가 포함되어 있습니다."),
+    INVALID_LOCATION(HttpStatus.BAD_REQUEST, "HOME과 WORK 위치를 모두 입력해주세요.");
 
     private final HttpStatus status;
     private final String message;

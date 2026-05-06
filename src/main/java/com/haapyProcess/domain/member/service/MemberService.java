@@ -6,6 +6,7 @@ import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.healthcondition.repository.HealthConditionRepository;
 import com.haapyProcess.domain.location.entity.CityCoordinate;
 import com.haapyProcess.domain.location.entity.Location;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.repository.LocationRepository;
 import com.haapyProcess.domain.member.dto.SignUpRequest;
 import com.haapyProcess.domain.member.dto.SignUpResponse;
@@ -35,6 +36,14 @@ public class MemberService {
     public SignUpResponse signUp(SignUpRequest request) {
         if (memberRepository.existsByLoginId(request.getLoginId())) {
             throw new CustomException(ErrorCode.DUPLICATE_LOGIN_ID);
+        }
+
+        boolean hasHome = request.getLocations().stream()
+                .anyMatch(l -> l.getLocationType() == LocationType.HOME);
+        boolean hasWork = request.getLocations().stream()
+                .anyMatch(l -> l.getLocationType() == LocationType.WORK);
+        if (!hasHome || !hasWork) {
+            throw new CustomException(ErrorCode.INVALID_LOCATION);
         }
 
         Member member = Member.builder()

@@ -23,7 +23,27 @@ public class AuthController {
     private final AuthService authService;
     private final MemberService memberService;
 
-    @Operation(summary = "회원가입")
+    @Operation(summary = "회원가입", description = """
+            **Request**
+
+            | 키 | 설명 | 타입 | 필수 | Nullable |
+            |---|---|---|---|---|
+            | loginId | 로그인 아이디 (영문/숫자 4~20자) | String | O | X |
+            | password | 비밀번호 (영문/숫자/특수문자 포함 8~20자) | String | O | X |
+            | name | 이름 (2~10자) | String | O | X |
+            | birth | 생년월일 (yyyy-MM-dd) | LocalDate | O | X |
+            | commuteTime | 출퇴근 시간 | String | X | O |
+            | locations | 위치 정보 목록 (HOME·WORK 각 1개 필수) | List | O | X |
+            | locations[].locationType | 위치 유형 (HOME 또는 WORK) | String(enum) | O | X |
+            | locations[].city | 도시명 (CityCoordinate enum 기준) | String | O | X |
+            | conditionIds | 질환 ID 목록 | List&lt;Long&gt; | O | X |
+
+            **Response**
+
+            | 키 | 설명 | 타입 | Nullable |
+            |---|---|---|---|
+            | memberId | 생성된 회원 ID | Long | X |
+            """)
     @ApiResponse(responseCode = "201", description = "회원가입 성공")
     @ApiResponse(responseCode = "400", description = "유효성 검사 실패 / 위치 누락 / 지원하지 않는 도시명")
     @ApiResponse(responseCode = "404", description = "존재하지 않는 질환 ID")
@@ -33,7 +53,21 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(memberService.signUp(request));
     }
 
-    @Operation(summary = "로그인")
+    @Operation(summary = "로그인", description = """
+            **Request**
+
+            | 키 | 설명 | 타입 | 필수 | Nullable |
+            |---|---|---|---|---|
+            | loginId | 로그인 아이디 | String | O | X |
+            | password | 비밀번호 | String | O | X |
+
+            **Response**
+
+            | 키 | 설명 | 타입 | Nullable |
+            |---|---|---|---|
+            | accessToken | 액세스 토큰 | String | X |
+            | refreshToken | 리프레시 토큰 | String | X |
+            """)
     @ApiResponse(responseCode = "200", description = "로그인 성공")
     @ApiResponse(responseCode = "400", description = "유효성 검사 실패")
     @ApiResponse(responseCode = "401", description = "비밀번호 불일치")
@@ -43,7 +77,15 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @Operation(summary = "로그아웃")
+    @Operation(summary = "로그아웃", description = """
+            **Request**
+
+            | 키 | 설명 | 타입 | 필수 | Nullable |
+            |---|---|---|---|---|
+            | refreshToken | 리프레시 토큰 | String | O | X |
+
+            **Response**: 없음
+            """)
     @ApiResponse(responseCode = "200", description = "로그아웃 성공")
     @ApiResponse(responseCode = "400", description = "유효성 검사 실패")
     @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
@@ -53,7 +95,20 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "토큰 재발급")
+    @Operation(summary = "토큰 재발급", description = """
+            **Request**
+
+            | 키 | 설명 | 타입 | 필수 | Nullable |
+            |---|---|---|---|---|
+            | refreshToken | 리프레시 토큰 | String | O | X |
+
+            **Response**
+
+            | 키 | 설명 | 타입 | Nullable |
+            |---|---|---|---|
+            | accessToken | 새 액세스 토큰 | String | X |
+            | refreshToken | 새 리프레시 토큰 | String | X |
+            """)
     @ApiResponse(responseCode = "200", description = "토큰 재발급 성공")
     @ApiResponse(responseCode = "400", description = "유효성 검사 실패")
     @ApiResponse(responseCode = "401", description = "만료되거나 유효하지 않은 리프레시 토큰")

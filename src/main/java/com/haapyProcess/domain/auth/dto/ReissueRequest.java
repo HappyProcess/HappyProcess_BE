@@ -7,7 +7,8 @@ import lombok.Getter;
 @Getter
 public class ReissueRequest {
 
-    @Schema(description = "리프레시 토큰")
+    @Schema(description = "리프레시 토큰", example = "eyJhbGciOiJIUzI1NiJ9...",
+            requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
     @NotBlank
     private String refreshToken;
 }

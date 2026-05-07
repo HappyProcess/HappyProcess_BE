@@ -2,9 +2,6 @@ package com.haapyProcess.domain.auth.controller;
 
 import com.haapyProcess.domain.auth.dto.*;
 import com.haapyProcess.domain.auth.service.AuthService;
-import com.haapyProcess.domain.member.dto.SignUpRequest;
-import com.haapyProcess.domain.member.dto.SignUpResponse;
-import com.haapyProcess.domain.member.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -24,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final MemberService memberService;
 
     @Operation(
         summary = "회원가입",
@@ -80,7 +76,7 @@ public class AuthController {
     @ApiResponse(responseCode = "409", description = "아이디 중복")
     @PostMapping("/signup")
     public ResponseEntity<SignUpResponse> signUp(@org.springframework.web.bind.annotation.RequestBody @Valid SignUpRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(memberService.signUp(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signUp(request));
     }
 
     @Operation(

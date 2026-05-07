@@ -1,4 +1,4 @@
-package com.haapyProcess.domain.member.dto;
+package com.haapyProcess.domain.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

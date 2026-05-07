@@ -1,4 +1,4 @@
-package com.haapyProcess.domain.member.dto;
+package com.haapyProcess.domain.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.haapyProcess.domain.location.entity.LocationType;

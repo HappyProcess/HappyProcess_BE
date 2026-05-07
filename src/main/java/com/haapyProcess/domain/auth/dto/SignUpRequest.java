@@ -19,11 +19,9 @@ public class SignUpRequest {
     @Pattern(regexp = "^[a-zA-Z0-9]{4,20}$", message = "아이디는 영문/숫자 4~20자여야 합니다.")
     private String loginId;
 
-    @Schema(description = "비밀번호 (영문/숫자/특수문자 포함 8~20자)", example = "Pass1234!",
+    @Schema(description = "비밀번호", example = "Pass1234!",
             requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
     @NotBlank
-    @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*\\d)(?=.*[!@#$%^&*])[a-zA-Z\\d!@#$%^&*]{8,20}$",
-            message = "비밀번호는 영문/숫자/특수문자 포함 8~20자여야 합니다.")
     private String password;
 
     @Schema(description = "이름 (2~10자)", example = "홍길동",

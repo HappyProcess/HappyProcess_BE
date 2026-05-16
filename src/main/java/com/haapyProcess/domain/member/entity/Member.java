@@ -38,13 +38,26 @@ public class Member {
     private String commuteTime;
 
     @Builder.Default
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Location> locations = new ArrayList<>();
 
     @OneToOne(mappedBy = "member", cascade = CascadeType.ALL)
     private Alert alert;
 
     @Builder.Default
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HealthCondition> healthConditions = new ArrayList<>();
+
+    // 프로필 수정을 위한 비즈니스 로직
+    public void updateProfile(String name, LocalDate birth, String commuteTime) {
+        if (name != null && !name.isBlank()) {
+            this.name = name;
+        }
+        if (birth != null) {
+            this.birth = birth;
+        }
+        if (commuteTime != null) {
+            this.commuteTime = commuteTime;
+        }
+    }
 }

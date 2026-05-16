@@ -59,9 +59,10 @@ public class SignUpRequest {
         @NotNull
         private LocationType locationType;
 
-        @Schema(description = "도시명 (CityCoordinate enum 기준)", example = "서울특별시",
+        // 💥 city(String) 대신 areaNo(String)를 받도록 수정합니다.
+        @Schema(description = "행정구역코드 (예: 1168010300)", example = "1168010300",
                 requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
         @NotBlank
-        private String city;
+        private String areaNo;
     }
 }

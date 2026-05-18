@@ -1,9 +1,9 @@
 package com.haapyProcess.domain.location.entity;
 
 import com.haapyProcess.domain.member.entity.Member;
+import com.haapyProcess.domain.region.entity.Region;
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
 
 @Entity
 @Table(name = "LOCATION")
@@ -26,12 +26,7 @@ public class Location {
     @Column(name = "LOCATION_TYPE", length = 20)
     private LocationType locationType;
 
-    @Column(name = "CITY", length = 20)
-    private String city;
-
-    @Column(name = "LAT", precision = 10, scale = 7)
-    private BigDecimal lat;
-
-    @Column(name = "LON", precision = 10, scale = 7)
-    private BigDecimal lon;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "AREA_NO")
+    private Region region;
 }

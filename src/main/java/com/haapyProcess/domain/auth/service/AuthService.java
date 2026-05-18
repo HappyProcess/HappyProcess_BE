@@ -7,12 +7,13 @@ import com.haapyProcess.domain.condition.entity.Condition;
 import com.haapyProcess.domain.condition.repository.ConditionRepository;
 import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.healthcondition.repository.HealthConditionRepository;
-import com.haapyProcess.domain.location.entity.CityCoordinate;
 import com.haapyProcess.domain.location.entity.Location;
 import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.repository.LocationRepository;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.member.repository.MemberRepository;
+import com.haapyProcess.domain.region.entity.Region;
+import com.haapyProcess.domain.region.repository.RegionRepository;
 import com.haapyProcess.global.config.JwtProperties;
 import com.haapyProcess.global.exception.CustomException;
 import com.haapyProcess.global.exception.ErrorCode;
@@ -22,7 +23,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -37,7 +37,9 @@ public class AuthService {
     private final HealthConditionRepository healthConditionRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final RegionRepository regionRepository;
     private final JwtProperties jwtProperties;
+
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
@@ -63,19 +65,17 @@ public class AuthService {
         memberRepository.save(member);
 
         for (SignUpRequest.LocationRequest loc : request.getLocations()) {
-            CityCoordinate coord;
-            try {
-                coord = CityCoordinate.valueOf(loc.getCity());
-            } catch (IllegalArgumentException e) {
-                throw new CustomException(ErrorCode.INVALID_CITY);
-            }
+
+            Region region = regionRepository.findById(loc.getAreaNo())
+                    .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CITY));
+            // (추후 ErrorCode.INVALID_REGION 같이 이름을 바꿔주시면 더 좋습니다)
+
             Location location = Location.builder()
                     .member(member)
                     .locationType(loc.getLocationType())
-                    .city(loc.getCity())
-                    .lat(BigDecimal.valueOf(coord.getLat()))
-                    .lon(BigDecimal.valueOf(coord.getLon()))
+                    .region(region)
                     .build();
+
             locationRepository.save(location);
         }
 

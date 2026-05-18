@@ -4,15 +4,14 @@ import com.haapyProcess.domain.location.entity.LocationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
 
-@Getter
-public class AddLocationRequest {
-    @Schema(description = "위치 유형", example = "HOME")
-    @NotNull
-    private LocationType locationType;
+public record AddLocationRequest(
 
-    @Schema(description = "도시명", example = "서울특별시")
-    @NotBlank
-    private String city;
-}
+        @Schema(description = "위치 유형 (HOME, WORK 등)", example = "HOME")
+        @NotNull(message = "위치 유형은 필수입니다.")
+        LocationType locationType,
+
+        @Schema(description = "행정구역코드", example = "1168010300")
+        @NotBlank(message = "행정구역코드는 필수입니다.")
+        String areaNo
+) {}

@@ -16,8 +16,16 @@ spring:
 server:
   port: 8080
 
-# 환경변수 매핑 설정
 jwt:
   secret: ${JWT_SECRET}
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+weather:
+  api:
+    key: ${WEATHER_API_KEY}
+    urls:
+      forecast: "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+      air-pollution: "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc"
+      pollen: "https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3"
+      living: "https://apis.data.go.kr/1360000/LivingWthrIdxServiceV4"

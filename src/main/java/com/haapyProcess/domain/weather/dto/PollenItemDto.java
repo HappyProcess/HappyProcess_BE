@@ -13,4 +13,10 @@ public class PollenItemDto {
     private String tomorrow;             // 내일 예측값
     private String dayaftertomorrow;     // 모레 예측값
     private String twodaysaftertomorrow; // 글피 예측값
+
+    private String h0;  // 기준 시간
+    private String h3;  // 3시간 뒤
+    private String h6;  // 6시간 뒤
+    private String h9;  // 9시간 뒤
+    private String h12; // 12시간 뒤
 }

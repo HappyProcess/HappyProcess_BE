@@ -13,14 +13,4 @@ public class KmaForecastItemDto {
     private int nx;           // 예보지점 X 좌표
     private int ny;           // 예보지점 Y 좌표
 
-    public String getCategoryName() {
-        return switch (category) {
-            case "TMP" -> "1시간 기온(℃)";
-            case "REH" -> "습도(%)";
-            case "SKY" -> "하늘상태";
-            case "PTY" -> "강수형태";
-            case "WSD" -> "풍속(m/s)";
-            default -> category;
-        };
-    }
 }

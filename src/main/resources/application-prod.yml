@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:mysql://34.50.59.40:3306/happy-process-mysql
+    username: root
+    password: happyProcess26!
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+weather:
+  api:
+    key: ${WEATHER_API_KEY}
+    urls:
+      forecast: "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0"
+      air-pollution: "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc"
+      pollen: "https://apis.data.go.kr/1360000/HealthWthrIdxServiceV3"
+      living: "https://apis.data.go.kr/1360000/LivingWthrIdxServiceV4"

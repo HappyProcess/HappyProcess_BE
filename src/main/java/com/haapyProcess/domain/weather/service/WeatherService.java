@@ -12,6 +12,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.DefaultUriBuilderFactory;
+
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -46,58 +47,71 @@ public class WeatherService {
     private String livingBaseUrl;
 
     /**
-     * [1] 최종 통합 기능: 프론트엔드 호출용 메인 로직
+     * 프론트엔드 제공용 통합 기상 데이터 조회 (단기예보, 미세먼지, 꽃가루, 자외선)
      */
     public WeatherResponseDto getCombinedWeatherData(String areaNo) {
-
-        // 💥 1. DB에서 프론트가 넘겨준 코드로 지역의 모든 정보(nx, ny, 측정소명)를 꺼내옵니다.
         Region region = regionRepository.findById(areaNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CITY));
 
-        log.info("통합 기상 정보 수집 시작 - 동: {}, 측정소: {}", region.getDong(), region.getStationName());
+        log.info("통합 기상 정보 수집 요청 - 지역명: {}, 행정구역코드: {}", region.getDong(), areaNo);
 
-        // 2. 단기예보 (DB에서 꺼낸 nx, ny 문자열을 바로 넘깁니다!)
+        // 1. 단기예보 조회
         List<WeatherHourlyDto> hourlyList = new ArrayList<>();
         try {
             hourlyList = getHourlyForecastList(region.getNx(), region.getNy());
-        } catch (Exception e) { log.warn("단기예보 수집 실패: {}", e.getMessage()); }
+        } catch (Exception e) {
+            log.warn("단기예보 수집 실패 (nx:{}, ny:{}): {}", region.getNx(), region.getNy(), e.getMessage());
+        }
 
         WeatherHourlyDto currentForecast = hourlyList.isEmpty() ?
                 WeatherHourlyDto.builder().temperature("-").condition("알 수 없음").build() : hourlyList.get(0);
 
-        // 3. 미세먼지 (DB에서 꺼낸 측정소명을 바로 넘깁니다!)
+        // 2. 미세먼지 조회
         AirKoreaItemDto dust = null;
         try {
-            if (region.getStationName() != null) {
+            if (region.getStationName() != null && !region.getStationName().isBlank()) {
                 dust = getRealTimeFineDust(region.getStationName());
+            } else {
+                log.warn("미세먼지 수집 보류: DB에 측정소명(stationName)이 존재하지 않습니다. (areaNo: {})", areaNo);
             }
-        } catch (Exception e) { log.warn("미세먼지 수집 실패: {}", e.getMessage()); }
+        } catch (Exception e) {
+            log.warn("미세먼지 API 통신 실패: {}", e.getMessage());
+        }
 
-        // 4. 소나무 꽃가루
+        // 3. 소나무 꽃가루 위험도 조회 (Fallback 적용)
         String pollen = "0";
         try {
             pollen = getPinePollenRiskWithFallback(areaNo);
-        } catch (Exception e) { log.warn("꽃가루 수집 실패: {}", e.getMessage()); }
+        } catch (Exception e) {
+            log.warn("꽃가루 API 통신 실패: {}", e.getMessage());
+        }
 
-        // 5. 자외선
+        // 4. 자외선 위험도 조회 (Fallback 적용 및 일 최고치 추출)
         String uv = "0";
         try {
             uv = getUvRiskWithFallback(areaNo);
-        } catch (Exception e) { log.warn("자외선 수집 실패: {}", e.getMessage()); }
+        } catch (Exception e) {
+            log.warn("자외선 API 통신 실패: {}", e.getMessage());
+        }
 
         return WeatherResponseDto.builder()
                 .regionName(region.getDong())
                 .temperature(currentForecast.getTemperature())
-                .humidity("-")
+                .humidity(currentForecast.getHumidity())
                 .weatherCondition(currentForecast.getCondition())
                 .pm10Value(dust != null ? dust.getPm10Value() : "-")
-                // ... (다른 dust 값들 추가 가능)
+                .pm10Grade(dust != null ? dust.getPm10Grade() : "-")
+                .pm25Value(dust != null ? dust.getPm25Value() : "-")
+                .pm25Grade(dust != null ? dust.getPm25Grade() : "-")
                 .pollenRiskLevel(pollen)
                 .uvRiskLevel(uv)
                 .hourlyForecasts(hourlyList)
                 .build();
     }
 
+    /**
+     * 기상청 단기예보 API 호출 (향후 6시간 데이터 추출)
+     */
     private List<WeatherHourlyDto> getHourlyForecastList(String nx, String ny) {
         String[] baseDateTime = calculateForecastBaseTime();
         DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(forecastUrl);
@@ -114,24 +128,29 @@ public class WeatherService {
                             .queryParam("dataType", "JSON")
                             .queryParam("base_date", baseDateTime[0])
                             .queryParam("base_time", baseDateTime[1])
-                            .queryParam("nx", nx) // DB 값 적용
-                            .queryParam("ny", ny) // DB 값 적용
+                            .queryParam("nx", nx)
+                            .queryParam("ny", ny)
                             .build())
                     .retrieve()
-                    // ... (기존 예외처리 및 응답 매핑 로직 유지)
                     .body(new ParameterizedTypeReference<PublicDataResponse<KmaForecastItemDto>>() {});
 
             validatePublicDataResponse(response);
             List<KmaForecastItemDto> items = response.getResponse().getBody().getItems().getItem();
-            if (items == null || items.isEmpty()) return new ArrayList<>();
+
+            if (items == null || items.isEmpty()) {
+                return new ArrayList<>();
+            }
             return parseHourlyWeatherData(items);
+
         } catch (Exception e) {
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
     }
 
+    /**
+     * 에어코리아 실시간 측정소별 미세먼지 API 호출
+     */
     private AirKoreaItemDto getRealTimeFineDust(String stationName) {
-        // 기존과 완벽히 동일하므로 그대로 둡니다.
         try {
             String encodedStationName = URLEncoder.encode(stationName, StandardCharsets.UTF_8);
             String directUrl = airPollutionUrl + "/getMsrstnAcctoRltmMesureDnsty"
@@ -150,19 +169,21 @@ public class WeatherService {
             if (items == null || items.isEmpty() || !items.get(0).isDataValid()) return null;
 
             return items.get(0);
+
         } catch (Exception e) {
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
     }
 
+    /**
+     * 소나무 꽃가루 위험도 API 호출 (동 -> 구 -> 시 단위 재귀 탐색)
+     */
     private String getPinePollenRiskWithFallback(String originalAreaNo) {
         String baseTime = calculateLivingBaseTime();
         DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(pollenBaseUrl);
         factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
 
-        String sigunguCode = originalAreaNo.substring(0, 5) + "00000";
-        String sidoCode = originalAreaNo.substring(0, 2) + "00000000";
-        String[] targetCodes = {originalAreaNo, sigunguCode, sidoCode};
+        String[] targetCodes = generateFallbackCodes(originalAreaNo);
 
         for (String areaNo : targetCodes) {
             try {
@@ -181,28 +202,30 @@ public class WeatherService {
                         .body(new ParameterizedTypeReference<PublicDataResponse<PollenItemDto>>() {});
 
                 if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) continue;
+
                 List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
                 if (items == null || items.isEmpty()) continue;
 
                 String todayValue = items.get(0).getToday();
                 if (todayValue != null && !todayValue.trim().isEmpty()) {
-                    return todayValue; // 성공하면 즉시 반환!
+                    return todayValue;
                 }
             } catch (Exception e) {
-                // 실패하면 무시하고 다음 넓은 지역으로 루프를 돕니다.
+                log.debug("꽃가루 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
             }
         }
-        return "0"; // 3단계 다 찔러봐도 없으면 0
+        return "0";
     }
 
+    /**
+     * 자외선 지수 API 호출 (동 -> 구 -> 시 단위 재귀 탐색 및 일 최고치 추출)
+     */
     private String getUvRiskWithFallback(String originalAreaNo) {
         String baseTime = calculateLivingBaseTime();
         DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(livingBaseUrl);
         factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
 
-        String sigunguCode = originalAreaNo.substring(0, 5) + "00000";
-        String sidoCode = originalAreaNo.substring(0, 2) + "00000000";
-        String[] targetCodes = {originalAreaNo, sigunguCode, sidoCode};
+        String[] targetCodes = generateFallbackCodes(originalAreaNo);
 
         for (String areaNo : targetCodes) {
             try {
@@ -221,60 +244,65 @@ public class WeatherService {
                         .body(new ParameterizedTypeReference<PublicDataResponse<PollenItemDto>>() {});
 
                 if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) continue;
+
                 List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
                 if (items == null || items.isEmpty()) continue;
 
-                String todayValue = items.get(0).getToday();
-                if (todayValue != null && !todayValue.trim().isEmpty()) {
-                    return todayValue;
+                PollenItemDto item = items.get(0);
+                String[] uvValues = { item.getH0(), item.getH3(), item.getH6(), item.getH9(), item.getH12() };
+
+                int maxUv = 0;
+                for (String val : uvValues) {
+                    if (val != null && !val.trim().isEmpty()) {
+                        try {
+                            int currentUv = Integer.parseInt(val);
+                            if (currentUv > maxUv) {
+                                maxUv = currentUv;
+                            }
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
                 }
+                return String.valueOf(maxUv);
+
             } catch (Exception e) {
+                log.debug("자외선 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
             }
         }
         return "0";
     }
 
     /**
-     * =====================================================================
-     * [3] 공통 헬퍼 메서드 (데이터 파싱 및 시간 계산)
-     * =====================================================================
+     * 기상청 데이터 파싱 및 시간순 정렬
      */
-
     private List<WeatherHourlyDto> parseHourlyWeatherData(List<KmaForecastItemDto> items) {
-        // LinkedHashMap을 사용하는 이유: 기상청이 주는 시간 순서(과거->미래)를 그대로 유지하기 위해서입니다.
         Map<String, WeatherHourlyDto> timelineMap = new LinkedHashMap<>();
 
         for (KmaForecastItemDto item : items) {
-            // 밤 23시에서 자정 00시로 넘어가는 상황을 구분하기 위해 '날짜+시간'을 고유 키로 사용합니다.
             String dateTimeKey = item.getFcstDate() + item.getFcstTime();
 
-            // 서랍(Map)에 해당 시간의 객체가 없으면 새로 만들어서 꺼냅니다.
             WeatherHourlyDto dto = timelineMap.getOrDefault(dateTimeKey, WeatherHourlyDto.builder()
                     .time(item.getFcstTime())
-                    .sky("1") // 기본값 세팅
-                    .pty("0") // 기본값 세팅
+                    .sky("1")
+                    .pty("0")
                     .build());
 
-            // 카테고리별로 알맞은 값을 객체에 넣습니다.
             switch (item.getCategory()) {
                 case "TMP": dto.setTemperature(item.getFcstValue()); break;
                 case "SKY": dto.setSky(item.getFcstValue()); break;
                 case "PTY": dto.setPty(item.getFcstValue()); break;
+                case "REH": dto.setHumidity(item.getFcstValue()); break;
             }
 
-            timelineMap.put(dateTimeKey, dto);
-
-            // 딱 6시간 치(6개의 서랍)가 다 채워졌고, 지금 들어온 데이터가 7번째 서랍의 것이라면 수집을 멈춥니다.
-            if (timelineMap.size() > 6) {
-                timelineMap.remove(dateTimeKey); // 초과된 7번째 데이터는 버림
+            if (timelineMap.size() == 6 && !timelineMap.containsKey(dateTimeKey)) {
                 break;
             }
+            timelineMap.put(dateTimeKey, dto);
         }
 
-        // 모인 6개의 시간대 데이터를 돌면서 SKY, PTY 코드를 최종 한글 상태값으로 변환합니다.
         List<WeatherHourlyDto> resultList = new ArrayList<>(timelineMap.values());
         for (WeatherHourlyDto dto : resultList) {
-            String condition = "맑음";
+            String condition;
             if (!"0".equals(dto.getPty())) {
                 condition = switch (dto.getPty()) {
                     case "1", "4" -> "비";
@@ -292,10 +320,12 @@ public class WeatherService {
             }
             dto.setCondition(condition);
         }
-
         return resultList;
     }
 
+    /**
+     * 단기예보 발표 기준 시간(BaseTime) 계산
+     */
     private String[] calculateForecastBaseTime() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime safeTime = now.minusMinutes(30);
@@ -319,6 +349,9 @@ public class WeatherService {
         return new String[]{baseDate, baseTime};
     }
 
+    /**
+     * 생활기상지수 발표 기준 시간(BaseTime) 계산
+     */
     private String calculateLivingBaseTime() {
         LocalDateTime now = LocalDateTime.now();
         int hour = now.getHour();
@@ -334,27 +367,36 @@ public class WeatherService {
         return targetTime.format(DateTimeFormatter.ofPattern("yyyyMMddHH"));
     }
 
+    /**
+     * 공공데이터포털 공통 응답 에러 검증
+     */
     private void validatePublicDataResponse(PublicDataResponse<?> response) {
         if (response == null || response.getResponse() == null || response.getResponse().getHeader() == null) {
-            log.error("응답 자체가 Null입니다.");
+            log.error("외부 API 응답이 Null입니다.");
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
 
         String resultCode = response.getResponse().getHeader().getResultCode();
         String resultMsg = response.getResponse().getHeader().getResultMsg();
 
-        // 00(성공)이 아닐 경우 로그에 상세 메시지를 찍습니다.
         if (!"00".equals(resultCode)) {
-            log.error("공공데이터 서버 응답 에러 - 코드: {}, 메시지: {}", resultCode, resultMsg);
-            // 여기서 "SERVICE_KEY_IS_NOT_REGISTERED_ERROR"가 뜨면 100% 키/권한 문제입니다.
+            log.error("공공데이터 서버 에러 - 코드: {}, 메시지: {}", resultCode, resultMsg);
             throw new CustomException(ErrorCode.EXTERNAL_API_ERROR);
         }
     }
 
-    // WeatherService 클래스 내부 최하단에 추가
     record AirKoreaRoot(Response response) {
         record Response(Header header, Body body) {}
         record Header(String resultCode, String resultMsg) {}
-        record Body(List<AirKoreaItemDto> items) {} // item 껍데기 없이 바로 List 반환!
+        record Body(List<AirKoreaItemDto> items) {}
+    }
+
+    /**
+     * [리팩토링] 지역 코드 Fallback 배열 생성기 (동 -> 구 -> 시)
+     */
+    private String[] generateFallbackCodes(String areaNo) {
+        String sigunguCode = areaNo.substring(0, 5) + "00000";
+        String sidoCode = areaNo.substring(0, 2) + "00000000";
+        return new String[]{areaNo, sigunguCode, sidoCode};
     }
 }

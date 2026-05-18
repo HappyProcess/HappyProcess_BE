@@ -36,7 +36,7 @@ public class AuthController {
             | **commuteTime** | 출퇴근 시간 | String | ❌ |
             | **locations** | 위치 정보 목록 | List | ✅ |
             | **locations[].locationType** | 위치 유형 | String(enum) | ✅ |
-            | **locations[].city** | 도시명 (CityCoordinate enum 기준) | String | ✅ |
+            | **locations[].areaNo** | 행정구역코드 (예: 1168010300) | String | ✅ |
             | **conditionIds** | 질환 ID 목록 | List&lt;Long&gt; | ✅ |
 
             > ⚠️ **locations에는 반드시 `HOME`과 `WORK`를 각각 1개씩 포함해야 합니다.**
@@ -59,12 +59,12 @@ public class AuthController {
               "commuteTime": "30분",
               "locations": [
                 {
-                  "locationType": "HOME",
-                  "city": "서울특별시"
+                    "locationType": "HOME",
+                    "areaNo": "1168010300"\s
                 },
                 {
-                  "locationType": "WORK",
-                  "city": "부산광역시"
+                    "locationType": "WORK",
+                    "areaNo": "2611010100"
                 }
               ],
               "conditionIds": [1, 2]

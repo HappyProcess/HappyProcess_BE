@@ -48,10 +48,9 @@ jobs:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
                 environment:
                   SPRING_PROFILES_ACTIVE: prod
-                  SPRING_DATASOURCE_URL: jdbc:mysql://34.50.59.40:3306/happy-process-mysql
-                  SPRING_DATASOURCE_USERNAME: root
-                  SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
-                  SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+                  DB_URL: ${{ secrets.DB_URL }}
+                  DB_USERNAME: ${{ secrets.DB_USERNAME }}
+                  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
                   SPRING_JPA_HIBERNATE_DDL_AUTO: update
                   JWT_SECRET: ${{ secrets.JWT_SECRET }}
                   JWT_ACCESS_EXPIRATION: ${{ secrets.JWT_ACCESS_EXPIRATION }}

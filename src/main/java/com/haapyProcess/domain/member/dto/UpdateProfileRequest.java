@@ -15,7 +15,4 @@ public class UpdateProfileRequest {
     @Schema(description = "생년월일 (yyyy-MM-dd)", example = "1995-05-05")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birth;
-
-    @Schema(description = "출퇴근 시간", example = "1시간")
-    private String commuteTime;
 }

@@ -54,4 +54,32 @@ public class LocationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.LOCATION_NOT_FOUND));
         locationRepository.delete(location);
     }
+
+    /**
+     * 메인 화면 날씨 조회를 위한 대표 지역 코드 추출 (집 -> 직장 순)
+     */
+    @Transactional(readOnly = true)
+    public String getMainAreaNo(Member member) {
+        List<Location> locations = locationRepository.findAllByMember(member);
+
+        if (locations.isEmpty()) {
+            throw new CustomException(ErrorCode.LOCATION_NOT_FOUND);
+        }
+
+        String homeAreaNo = locations.stream()
+                .filter(loc -> "HOME".equals(loc.getLocationType().name()))
+                .map(loc -> loc.getRegion().getAreaNo())
+                .findFirst()
+                .orElse(null);
+
+        if (homeAreaNo != null) {
+            return homeAreaNo;
+        }
+
+        return locations.stream()
+                .filter(loc -> "WORK".equals(loc.getLocationType().name()))
+                .map(loc -> loc.getRegion().getAreaNo())
+                .findFirst()
+                .orElseGet(() -> locations.get(0).getRegion().getAreaNo());
+    }
 }

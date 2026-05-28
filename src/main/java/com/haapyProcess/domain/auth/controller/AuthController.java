@@ -33,7 +33,7 @@ public class AuthController {
             | **password** | 비밀번호 (영문/숫자/특수문자 포함 8~20자) | String | ✅ |
             | **name** | 이름 (2~10자) | String | ✅ |
             | **birth** | 생년월일 (yyyy-MM-dd) | LocalDate | ✅ |
-            | **commuteTime** | 출퇴근 시간 | String | ❌ |
+            | **alertTime** | 기본 알림 시간 (HH:mm 형식) | String | ❌ |
             | **locations** | 위치 정보 목록 | List | ✅ |
             | **locations[].locationType** | 위치 유형 | String(enum) | ✅ |
             | **locations[].areaNo** | 행정구역코드 (예: 1168010300) | String | ✅ |
@@ -56,7 +56,7 @@ public class AuthController {
               "password": "Pass1234!",
               "name": "홍길동",
               "birth": "2000-01-01",
-              "commuteTime": "30분",
+              "alertTime": "08:00",
               "locations": [
                 {
                     "locationType": "HOME",

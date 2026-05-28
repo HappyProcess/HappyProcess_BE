@@ -36,14 +36,35 @@ public class WeatherController {
                 ---
                 
                 ## **📋 주요 Response 데이터 구조**
-                * **regionName**: 조회된 동네 이름 (예: 청운효자동)
-                * **temperature**: 현재 기온
-                * **humidity**: 현재 습도
-                * **weatherCondition**: 날씨 상태 (맑음, 흐림, 비 등)
-                * **pm10 / pm25**: 미세먼지 수치 및 등급 (좋음, 보통, 나쁨 등)
-                * **pollenRiskLevel**: 소나무 꽃가루 위험도 지수
-                * **uvRiskLevel**: 일일 최고 자외선 지수
-                * **hourlyForecasts**: 향후 6시간 동안의 시간별 예보 배열
+                * 모든 생활 지수와 기상 데이터는 **조회 시점(현재 시간)**을 기준으로 제공됩니다.
+                
+                | **카테고리** | **키 (Key)** | **설명** | **타입** |
+                |---|---|---|---|
+                | **기본 정보** | **regionName** | 조회된 동네 이름 (예: 역삼동) | String |
+                | **단기 예보** | **temperature** | 현재 기온 원본 문자열 | String |
+                | | **humidity** | 현재 습도 원본 문자열 | String |
+                | | **weatherCondition** | 날씨 상태 (맑음, 구름많음, 흐림, 비, 눈 등) | String |
+                | **미세먼지** | **pm10Value** | 미세먼지 수치 원본 문자열 | String |
+                | | **pm10Grade** | 미세먼지 등급 (1:좋음 ~ 4:매우나쁨) | String |
+                | | **pm25Value** | 초미세먼지 수치 원본 문자열 | String |
+                | | **pm25Grade** | 초미세먼지 등급 (1:좋음 ~ 4:매우나쁨) | String |
+                | **생활 지수** | **pollenRiskLevel** | **현재 시간 기준** 소나무 꽃가루 위험도 원본 | String |
+                | | **uvRiskLevel** | **현재 시간 기준** 자외선 지수 원본 | String |
+                | **시간별 예보**| **hourlyForecasts** | 향후 6시간 동안의 시간별 예보 배열 | List |
+                
+                ## **🔧 위험도 판별용 파싱 데이터 (Parsed Data)**
+                * 백엔드 내부 연산 및 프론트엔드의 숫자형 연산을 돕기 위해 Double/Integer 형태로 파싱된 데이터입니다.
+                
+                | **키 (Key)** | **설명** | **타입** |
+                |---|---|---|
+                | **parsedCurrentTemp** | 현재 기온 (기본값: 20.0) | double |
+                | **parsedHumidity** | 현재 습도 (기본값: 50.0) | double |
+                | **parsedPm10Value** | 미세먼지 수치 (기본값: 0.0) | double |
+                | **parsedPm25Value** | 초미세먼지 수치 (기본값: 0.0) | double |
+                | **parsedPollenRisk** | 파싱된 꽃가루 지수 (기본값: 0.0) | double |
+                | **parsedUvRisk** | 파싱된 자외선 지수 (기본값: 0.0) | double |
+                | **tempDropIn6Hours** | 6시간 내 기온 급감량 (현재기온 - 6시간내 최저기온) | double |
+                | **parsedCurrentPty** | 강수 형태 코드 (0:없음, 1:비, 2:비/눈, 3:눈, 4:소나기) | int |
                 """
     )
     @ApiResponse(responseCode = "200", description = "날씨 데이터 조회 성공")

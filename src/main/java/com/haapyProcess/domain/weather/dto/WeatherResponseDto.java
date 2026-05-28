@@ -26,4 +26,80 @@ public class WeatherResponseDto {
     private String uvRiskLevel;     // 자외선 위험도
 
     private List<WeatherHourlyDto> hourlyForecasts;
+
+    public double getParsedPollenRisk() {
+        try {
+            return Double.parseDouble(this.pollenRiskLevel);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    public double getParsedUvRisk() {
+        try {
+            return Double.parseDouble(this.uvRiskLevel);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    public double getParsedPm10Value() {
+        try {
+            return Double.parseDouble(this.pm10Value);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    public double getParsedPm25Value() {
+        try {
+            return Double.parseDouble(this.pm25Value);
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    public double getParsedHumidity() {
+        try {
+            return Double.parseDouble(this.humidity);
+        } catch (Exception e) {
+            return 50.0;
+        }
+    }
+
+    public double getParsedCurrentTemp() {
+        try {
+            return Double.parseDouble(this.temperature);
+        } catch (Exception e) {
+            return 20.0;
+        }
+    }
+
+    // 6시간 내 기온 급감 계산기 (현재 기온 - 6시간 내 최저 예상 기온)
+    public double getTempDropIn6Hours() {
+        if (hourlyForecasts == null || hourlyForecasts.isEmpty()) return 0.0;
+
+        double currentTemp = getParsedCurrentTemp();
+        double minFutureTemp = hourlyForecasts.stream()
+                .mapToDouble(h -> {
+                    try {
+                        return Double.parseDouble(h.getTemperature());
+                    } catch (Exception e) {
+                        return currentTemp;
+                    }
+                })
+                .min().orElse(currentTemp);
+
+        return currentTemp - minFutureTemp;
+    }
+
+    // 현재 강수 형태(PTY) 숫자 변환기 (0:없음, 1:비, 2:비/눈, 3:눈, 4:소나기)
+    public int getParsedCurrentPty() {
+        if (hourlyForecasts == null || hourlyForecasts.isEmpty()) return 0;
+        try {
+            return Integer.parseInt(hourlyForecasts.get(0).getPty());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
 }

@@ -46,6 +46,12 @@ public class HealthConditionService {
         return new MyConditionsResponse(myConditions);
     }
 
+    // 분석을 위한 특정 회원의 건강 상태 엔티티 목록 조회
+    @Transactional(readOnly = true)
+    public List<HealthCondition> findAllByMember(Member member) {
+        return healthConditionRepository.findAllByMember(member);
+    }
+
     // 내 건강 상태 일괄 수정
     @Transactional
     public void updateMyConditions(UpdateConditionsRequest request) {

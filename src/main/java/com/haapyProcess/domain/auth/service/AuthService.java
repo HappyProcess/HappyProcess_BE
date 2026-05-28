@@ -22,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.haapyProcess.domain.alert.entity.Alert;
+import com.haapyProcess.domain.alert.repository.AlertRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +41,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RegionRepository regionRepository;
     private final JwtProperties jwtProperties;
+    private final AlertRepository alertRepository;
 
 
     @Transactional
@@ -60,7 +63,6 @@ public class AuthService {
                 .pw(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .birth(request.getBirth())
-                .commuteTime(request.getCommuteTime())
                 .build();
         memberRepository.save(member);
 
@@ -91,8 +93,18 @@ public class AuthService {
             healthConditionRepository.save(hc);
         }
 
+        if (request.getAlertTime() != null && !request.getAlertTime().isBlank()) {
+            Alert initialAlert = Alert.builder()
+                    .member(member)
+                    .alertTime(request.getAlertTime())
+                    .isEnable(true)
+                    .build();
+            alertRepository.save(initialAlert);
+        }
+
         return new SignUpResponse(member.getMemberId());
     }
+
 
     @Transactional
     public LoginResponse login(LoginRequest request) {

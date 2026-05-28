@@ -36,9 +36,10 @@ public class SignUpRequest {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birth;
 
-    @Schema(description = "출퇴근 시간 (선택)", example = "30분",
+    @Schema(description = "기본 알림 시간 (선택, HH:mm 형식)", example = "08:00",
             requiredMode = Schema.RequiredMode.NOT_REQUIRED, nullable = true)
-    private String commuteTime;
+    @Pattern(regexp = "^([01]\\d|2[0-3]):([0-5]\\d)$", message = "알림 시간은 HH:mm 형식이어야 합니다.")
+    private String alertTime;
 
     @Schema(description = "위치 정보 (HOME, WORK 각 1개 필수)",
             requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
@@ -59,7 +60,7 @@ public class SignUpRequest {
         @NotNull
         private LocationType locationType;
 
-        // 💥 city(String) 대신 areaNo(String)를 받도록 수정합니다.
+        // city(String) 대신 areaNo(String)를 받도록 수정합니다.
         @Schema(description = "행정구역코드 (예: 1168010300)", example = "1168010300",
                 requiredMode = Schema.RequiredMode.REQUIRED, nullable = false)
         @NotBlank

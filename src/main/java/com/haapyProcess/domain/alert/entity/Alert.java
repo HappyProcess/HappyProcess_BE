@@ -2,14 +2,14 @@ package com.haapyProcess.domain.alert.entity;
 
 import com.haapyProcess.domain.member.entity.Member;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "ALERT")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Alert {
 
     @Id
@@ -17,25 +17,18 @@ public class Alert {
     @Column(name = "ALERT_ID")
     private Long alertId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "MEMBER_ID")
     private Member member;
 
-    @Column(name = "ENABLE")
-    private Boolean enable;
+    @Column(name = "ALERT_TIME", length = 5, nullable = false)
+    private String alertTime; // 예: "08:00", "18:30" 형식으로 저장
 
-    @Column(name = "ALERT_TIME", length = 5)
-    private String alertTime;
+    @Column(name = "IS_ENABLE", nullable = false)
+    private boolean isEnable; // 알림 켜짐(true) / 꺼짐(false) 상태
 
-    @Column(name = "DUST")
-    private Boolean dust;
-
-    @Column(name = "HUMIDITY")
-    private Boolean humidity;
-
-    @Column(name = "UV")
-    private Boolean uv;
-
-    @Column(name = "TEMP")
-    private Boolean temp;
+    // 알림 활성화 상태를 변경하는 비즈니스 메서드
+    public void toggleEnable(boolean isEnable) {
+        this.isEnable = isEnable;
+    }
 }

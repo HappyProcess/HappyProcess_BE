@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,7 +56,6 @@ public class WeatherService {
 
         log.info("통합 기상 정보 수집 요청 - 지역명: {}, 행정구역코드: {}", region.getDong(), areaNo);
 
-        // 1. 단기예보 조회
         List<WeatherHourlyDto> hourlyList = new ArrayList<>();
         try {
             hourlyList = getHourlyForecastList(region.getNx(), region.getNy());
@@ -78,7 +78,7 @@ public class WeatherService {
             log.warn("미세먼지 API 통신 실패: {}", e.getMessage());
         }
 
-        // 3. 소나무 꽃가루 위험도 조회 (Fallback 적용)
+        // 3. 소나무 꽃가루 위험도 조회
         String pollen = "0";
         try {
             pollen = getPinePollenRiskWithFallback(areaNo);
@@ -86,7 +86,7 @@ public class WeatherService {
             log.warn("꽃가루 API 통신 실패: {}", e.getMessage());
         }
 
-        // 4. 자외선 위험도 조회 (Fallback 적용 및 일 최고치 추출)
+        // 4. 자외선 위험도 조회
         String uv = "0";
         try {
             uv = getUvRiskWithFallback(areaNo);
@@ -206,10 +206,8 @@ public class WeatherService {
                 List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
                 if (items == null || items.isEmpty()) continue;
 
-                String todayValue = items.get(0).getToday();
-                if (todayValue != null && !todayValue.trim().isEmpty()) {
-                    return todayValue;
-                }
+                return extractCurrentLivingIndex(items.get(0), baseTime);
+
             } catch (Exception e) {
                 log.debug("꽃가루 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
             }
@@ -248,28 +246,35 @@ public class WeatherService {
                 List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
                 if (items == null || items.isEmpty()) continue;
 
-                PollenItemDto item = items.get(0);
-                String[] uvValues = { item.getH0(), item.getH3(), item.getH6(), item.getH9(), item.getH12() };
-
-                int maxUv = 0;
-                for (String val : uvValues) {
-                    if (val != null && !val.trim().isEmpty()) {
-                        try {
-                            int currentUv = Integer.parseInt(val);
-                            if (currentUv > maxUv) {
-                                maxUv = currentUv;
-                            }
-                        } catch (NumberFormatException ignored) {
-                        }
-                    }
-                }
-                return String.valueOf(maxUv);
+                // 최고치가 아닌 현재 시간대와 일치하는 지수를 추출하여 반환
+                return extractCurrentLivingIndex(items.get(0), baseTime);
 
             } catch (Exception e) {
                 log.debug("자외선 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
             }
         }
         return "0";
+    }
+
+    private String extractCurrentLivingIndex(PollenItemDto item, String baseTimeStr) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHH");
+            LocalDateTime baseTime = LocalDateTime.parse(baseTimeStr, formatter);
+            LocalDateTime now = LocalDateTime.now();
+
+            long diffHours = ChronoUnit.HOURS.between(baseTime, now);
+
+            String result;
+            if (diffHours < 3) result = item.getH0();
+            else if (diffHours < 6) result = item.getH3();
+            else if (diffHours < 9) result = item.getH6();
+            else if (diffHours < 12) result = item.getH9();
+            else result = item.getH12();
+
+            return (result != null && !result.trim().isEmpty()) ? result : "0";
+        } catch (Exception e) {
+            return "0";
+        }
     }
 
     /**

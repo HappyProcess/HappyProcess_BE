@@ -58,7 +58,7 @@ public class AlertController {
 
     // 알림 켜기/끄기 토글
     @Operation(
-            summary = "특정 알림 켜기/끄기 (Toggle)",
+            summary = "특정 알림 켜기/끄기",
             description = """
                 특정 알림의 활성화/비활성화 상태를 변경합니다.
                 
@@ -82,7 +82,7 @@ public class AlertController {
 
     // 내 알림 기록 조회
     @Operation(
-            summary = "내 알림 발송 기록 조회 (종 모양)",
+            summary = "내 알림 발송 기록 조회",
             description = "스케줄러에 의해 실제로 발송된 알림 내역을 최신순(내림차순)으로 조회합니다. 화면의 알림 목록창에 사용됩니다."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
@@ -120,6 +120,20 @@ public class AlertController {
             @Parameter(description = "삭제할 알림 ID", example = "1") @PathVariable Long alertId) {
         Member currentMember = memberService.getCurrentMember();
         alertService.deleteAlert(currentMember, alertId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "특정 알림 발송 기록 삭제",
+            description = "유저가 받은 특정 알림 내역을 개별적으로 완전히 삭제합니다."
+    )
+    @ApiResponse(responseCode = "204", description = "삭제 성공 (No Content)")
+    @ApiResponse(responseCode = "403", description = "본인의 기록이 아님 (권한 없음)")
+    @DeleteMapping("/history/{historyId}")
+    public ResponseEntity<Void> deleteHistory(
+            @Parameter(description = "삭제할 알림 발송 기록 ID", example = "1") @PathVariable Long historyId) {
+        Member currentMember = memberService.getCurrentMember();
+        alertService.deleteHistory(currentMember, historyId);
         return ResponseEntity.noContent().build();
     }
 }

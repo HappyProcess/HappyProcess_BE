@@ -20,9 +20,8 @@ public class DermatitisRiskRule implements DiseaseRiskRule {
 
     @Override
     public boolean isAtRisk(WeatherResponseDto weather) {
-        double humidity = weather.getParsedHumidity();
         return weather.getParsedUvRisk() >= WeatherRiskCriteria.UV_HIGH_MIN.getValue() ||
-                humidity < WeatherRiskCriteria.HUMIDITY_VERY_DRY_MAX.getValue() ||
-                humidity >= WeatherRiskCriteria.HUMIDITY_WET_MIN.getValue();
+                weather.getParsedHumidity() < WeatherRiskCriteria.HUMIDITY_VERY_DRY_MAX.getValue() ||
+                weather.getParsedHumidity() >= WeatherRiskCriteria.HUMIDITY_WET_MIN.getValue();
     }
 }

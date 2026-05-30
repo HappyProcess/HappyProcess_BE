@@ -64,6 +64,7 @@ public class WeatherController {
                 | **parsedPollenRisk** | 파싱된 꽃가루 지수 (기본값: 0.0) | double |
                 | **parsedUvRisk** | 파싱된 자외선 지수 (기본값: 0.0) | double |
                 | **tempDropIn6Hours** | 6시간 내 기온 급감량 (현재기온 - 6시간내 최저기온) | double |
+                | tempRiseIn6Hours | 6시간 내 기온 급상승량 (6시간내 최고기온 - 현재기온) | double |
                 | **parsedCurrentPty** | 강수 형태 코드 (0:없음, 1:비, 2:비/눈, 3:눈, 4:소나기) | int |
                 """
     )

@@ -20,6 +20,6 @@ public class StrokeRiskRule implements DiseaseRiskRule {
 
     @Override
     public boolean isAtRisk(WeatherResponseDto weather) {
-        return weather.getTempDropIn6Hours() >= WeatherRiskCriteria.DIURNAL_RANGE_COMMON_MIN.getValue();
+        return weather.getTempDropIn6Hours() >= WeatherRiskCriteria.TEMP_DROP_SUDDEN.getValue();
     }
 }

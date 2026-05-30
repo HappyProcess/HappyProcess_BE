@@ -93,6 +93,24 @@ public class WeatherResponseDto {
         return currentTemp - minFutureTemp;
     }
 
+    // 6시간 내 기온 급상승 계산기 (6시간 내 최고 예상 기온 - 현재 기온)
+    public double getTempRiseIn6Hours() {
+        if (hourlyForecasts == null || hourlyForecasts.isEmpty()) return 0.0;
+
+        double currentTemp = getParsedCurrentTemp();
+        double maxFutureTemp = hourlyForecasts.stream()
+                .mapToDouble(h -> {
+                    try {
+                        return Double.parseDouble(h.getTemperature());
+                    } catch (Exception e) {
+                        return currentTemp;
+                    }
+                })
+                .max().orElse(currentTemp); // 최솟값이 아닌 최댓값을 찾습니다.
+
+        return maxFutureTemp - currentTemp;
+    }
+
     // 현재 강수 형태(PTY) 숫자 변환기 (0:없음, 1:비, 2:비/눈, 3:눈, 4:소나기)
     public int getParsedCurrentPty() {
         if (hourlyForecasts == null || hourlyForecasts.isEmpty()) return 0;

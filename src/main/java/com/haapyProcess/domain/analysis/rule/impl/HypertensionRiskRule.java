@@ -20,7 +20,14 @@ public class HypertensionRiskRule implements DiseaseRiskRule {
 
     @Override
     public boolean isAtRisk(WeatherResponseDto weather) {
+        int month = java.time.LocalDate.now().getMonthValue();
+        boolean isSummer = (month >= 5 && month <= 10);
+
+        double tempChange = Math.max(weather.getTempDropIn6Hours(), weather.getTempRiseIn6Hours());
+        double changeLimit = isSummer ? WeatherRiskCriteria.TEMP_CHANGE_HYPER_SUMMER.getValue()
+                : WeatherRiskCriteria.TEMP_CHANGE_HYPER_WINTER.getValue();
+
         return weather.getParsedCurrentTemp() >= WeatherRiskCriteria.TEMP_HEAT_WAVE.getValue() ||
-                weather.getTempDropIn6Hours() >= WeatherRiskCriteria.DIURNAL_RANGE_COMMON_MIN.getValue();
+                tempChange >= changeLimit;
     }
 }

@@ -24,6 +24,6 @@ public class ElderlyRiskRule implements DiseaseRiskRule {
         return weather.getParsedCurrentTemp() >= WeatherRiskCriteria.TEMP_HEAT_WAVE.getValue() ||
                 weather.getParsedCurrentTemp() <= WeatherRiskCriteria.TEMP_COLD_WAVE.getValue() ||
                 weather.getParsedPm10Value() >= WeatherRiskCriteria.PM10_NORMAL_MIN.getValue() ||
-                pty == 2 || pty == 3;
+                (pty == 2 || pty == 3);
     }
 }

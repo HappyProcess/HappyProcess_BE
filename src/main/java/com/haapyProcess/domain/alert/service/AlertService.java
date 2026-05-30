@@ -72,7 +72,7 @@ public class AlertService {
         history.markAsRead();
     }
 
-    // 6. 알림 삭제
+    // 6. 알림 설정 시간 삭제
     @Transactional
     public void deleteAlert(Member member, Long alertId) {
         Alert alert = alertRepository.findById(alertId)
@@ -82,5 +82,18 @@ public class AlertService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
         }
         alertRepository.delete(alert);
+    }
+
+    // 7. 알림 발송 내역(기록) 삭제
+    @Transactional
+    public void deleteHistory(Member member, Long historyId) {
+        NotificationHistory history = historyRepository.findById(historyId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 알림 기록입니다."));
+
+        if (!history.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
+        }
+
+        historyRepository.delete(history);
     }
 }

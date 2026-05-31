@@ -61,4 +61,5 @@ jobs:
                 restart: always
             EOF
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
-            docker compose -f ~/docker-compose.prod.yml up -d
+            docker compose -f ~/docker-compose.prod.yml up -d --force-recreate
+            docker image prune -f

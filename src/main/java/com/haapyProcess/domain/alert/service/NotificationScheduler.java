@@ -36,10 +36,12 @@ public class NotificationScheduler {
     @Transactional
     public void processScheduledAlerts() {
         String currentTime = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH:mm"));
+        log.info("[스케줄러] tick {}", currentTime);
 
         List<Alert> activeAlerts = alertRepository.findAllByAlertTimeAndIsEnableTrue(currentTime);
 
         if (activeAlerts.isEmpty()) {
+            log.info("[스케줄러] {} 발송 대상 없음", currentTime);
             return;
         }
 

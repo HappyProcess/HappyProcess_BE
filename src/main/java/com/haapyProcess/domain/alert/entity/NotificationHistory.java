@@ -30,6 +30,9 @@ public class NotificationHistory {
     @Column(name = "DISEASE_NAMES", length = 100)
     private String diseaseNames; // 예: "천식, 고혈압"
 
+    @Column(name = "FACTOR_NAMES", length = 100)
+    private String factorNames; // 기준 초과한 날씨 요인. 예: "미세먼지, 초미세먼지"
+
     @Column(name = "MESSAGE", length = 255, nullable = false)
     private String message; // 예: "[천식] 현재 위험도가 높습니다. 외출 시 주의하세요."
 

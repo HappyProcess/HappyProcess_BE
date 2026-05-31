@@ -6,7 +6,7 @@ import com.haapyProcess.domain.location.entity.LocationType;
 public record NotificationHistoryResponse(
         Long historyId,
         String diseaseNames,
-        String message,
+        String factorNames,
         boolean isRead,
         String createdAt,
         LocationType locationType
@@ -16,7 +16,7 @@ public record NotificationHistoryResponse(
         return new NotificationHistoryResponse(
                 history.getHistoryId(),
                 history.getDiseaseNames(),
-                history.getMessage(),
+                history.getFactorNames(),
                 history.isRead(),
                 formattedDate,
                 history.getEffectiveLocationType()

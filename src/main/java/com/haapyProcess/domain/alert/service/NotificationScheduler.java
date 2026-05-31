@@ -95,6 +95,7 @@ public class NotificationScheduler {
                 .member(member)
                 .diseaseIds(diseaseIdsStr)
                 .diseaseNames(diseaseNamesStr)
+                .factorNames(factorNamesStr)
                 .message(message)
                 .isRead(false)
                 .createdAt(alertMoment)

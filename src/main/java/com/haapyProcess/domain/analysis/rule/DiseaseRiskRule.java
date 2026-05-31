@@ -1,6 +1,9 @@
 package com.haapyProcess.domain.analysis.rule;
 
+import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
+
+import java.util.List;
 
 public interface DiseaseRiskRule {
 
@@ -9,14 +12,9 @@ public interface DiseaseRiskRule {
      * 일반인(질병 없음)은 0L, 실제 질병은 1L부터 시작합니다.
      */
     Long getConditionId();
-
-    /**
-     * 프론트엔드 반환 등을 위해 질병 이름을 반환합니다.
-     */
     String getDiseaseName();
 
-    /**
-     * 날씨 조건에 따라 위험 여부를 판단합니다.
-     */
-    boolean isAtRisk(WeatherResponseDto weather);
+    // 날씨 원인별 맞춤 가이드 분석 반환 (비어 있으면 안전)
+    List<FactorGuide> evaluateFactorGuides(WeatherResponseDto weather);
+
 }

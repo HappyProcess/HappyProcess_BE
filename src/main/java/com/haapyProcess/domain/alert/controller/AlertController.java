@@ -56,6 +56,31 @@ public class AlertController {
         return ResponseEntity.ok(alertService.getMyAlerts(currentMember));
     }
 
+    // 알림 시간 수정
+    @Operation(
+            summary = "알림 시간 수정",
+            description = """
+                특정 알림의 시간을 변경합니다.
+
+                ## **📋 Request Fields**
+                | **키** | **설명** | **타입** | **필수** |
+                |---|---|---|:---:|
+                | **alertTime** | 변경할 알림 시간 (반드시 HH:mm 형식) | String | ✅ |
+                """
+    )
+    @ApiResponse(responseCode = "200", description = "수정 성공")
+    @ApiResponse(responseCode = "400", description = "잘못된 시간 형식 (예: 25:99)")
+    @ApiResponse(responseCode = "403", description = "본인의 알림이 아님 (권한 없음)")
+    @ApiResponse(responseCode = "404", description = "존재하지 않는 알림 ID")
+    @ApiResponse(responseCode = "409", description = "이미 동일한 시간의 알림이 존재함")
+    @PatchMapping("/{alertId}")
+    public ResponseEntity<AlertResponse> updateAlert(
+            @Parameter(description = "수정할 알림 ID", example = "1") @PathVariable Long alertId,
+            @RequestBody @Valid UpdateAlertRequest request) {
+        Member currentMember = memberService.getCurrentMember();
+        return ResponseEntity.ok(alertService.updateAlert(currentMember, alertId, request.alertTime()));
+    }
+
     // 알림 켜기/끄기 토글
     @Operation(
             summary = "특정 알림 켜기/끄기",

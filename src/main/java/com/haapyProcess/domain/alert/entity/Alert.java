@@ -31,4 +31,8 @@ public class Alert {
     public void toggleEnable(boolean isEnable) {
         this.isEnable = isEnable;
     }
+
+    public void updateAlertTime(String alertTime) {
+        this.alertTime = alertTime;
+    }
 }

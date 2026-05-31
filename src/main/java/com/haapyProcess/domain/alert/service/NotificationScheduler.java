@@ -91,7 +91,7 @@ public class NotificationScheduler {
                 .distinct()
                 .collect(Collectors.joining(", "));
 
-        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요. 외출 시 주의하세요!", diseaseNamesStr, factorNamesStr);
+        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요.", diseaseNamesStr, factorNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
                 .member(member)

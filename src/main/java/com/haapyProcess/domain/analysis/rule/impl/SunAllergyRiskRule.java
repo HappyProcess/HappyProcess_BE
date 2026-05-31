@@ -10,7 +10,7 @@ public class SunAllergyRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 5L;
+        return 4L;
     }
 
     @Override

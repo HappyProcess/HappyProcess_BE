@@ -10,7 +10,7 @@ public class HypertensionRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 3L;
+        return 2L;
     }
 
     @Override

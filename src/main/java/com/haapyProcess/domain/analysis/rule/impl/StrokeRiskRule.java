@@ -10,7 +10,7 @@ public class StrokeRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 12L;
+        return 11L;
     }
 
     @Override

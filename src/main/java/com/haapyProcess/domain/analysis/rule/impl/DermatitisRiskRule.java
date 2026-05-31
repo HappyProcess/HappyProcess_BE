@@ -10,7 +10,7 @@ public class DermatitisRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 10L;
+        return 9L;
     }
 
     @Override

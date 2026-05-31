@@ -10,7 +10,7 @@ public class PollenAllergyRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 6L;
+        return 5L;
     }
 
     @Override

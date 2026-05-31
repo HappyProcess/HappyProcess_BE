@@ -10,7 +10,7 @@ public class RhinitisRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 7L;
+        return 6L;
     }
 
     @Override

@@ -10,7 +10,7 @@ public class DryEyeRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 4L;
+        return 3L;
     }
 
     @Override

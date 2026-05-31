@@ -5,6 +5,7 @@ import com.haapyProcess.domain.location.dto.LocationResponse;
 import com.haapyProcess.domain.region.entity.Region;
 import com.haapyProcess.domain.region.repository.RegionRepository;
 import com.haapyProcess.domain.location.entity.Location;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.repository.LocationRepository;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.member.service.MemberService;
@@ -81,5 +82,17 @@ public class LocationService {
                 .map(loc -> loc.getRegion().getAreaNo())
                 .findFirst()
                 .orElseGet(() -> locations.get(0).getRegion().getAreaNo());
+    }
+
+    /**
+     * 특정 위치 타입(HOME/WORK)의 areaNo를 조회. 해당 타입이 없으면 getMainAreaNo로 폴백.
+     */
+    @Transactional(readOnly = true)
+    public String getAreaNoByType(Member member, LocationType locationType) {
+        return locationRepository.findAllByMember(member).stream()
+                .filter(loc -> loc.getLocationType() == locationType)
+                .map(loc -> loc.getRegion().getAreaNo())
+                .findFirst()
+                .orElseGet(() -> getMainAreaNo(member));
     }
 }

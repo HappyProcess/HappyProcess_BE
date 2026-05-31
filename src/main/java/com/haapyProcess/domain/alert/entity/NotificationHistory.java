@@ -1,5 +1,6 @@
 package com.haapyProcess.domain.alert.entity;
 
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,6 +30,12 @@ public class NotificationHistory {
     @Column(name = "DISEASE_NAMES", length = 100)
     private String diseaseNames; // 예: "천식, 고혈압"
 
+    @Column(name = "FACTOR_NAMES", length = 100)
+    private String factorNames; // 기준 초과한 날씨 요인. 예: "미세먼지, 초미세먼지"
+
+    @Column(name = "RELATIVE_NAME", length = 50)
+    private String relativeName; // 가족 기준 알림이면 그 가족 이름. null이면 본인 알림.
+
     @Column(name = "MESSAGE", length = 255, nullable = false)
     private String message; // 예: "[천식] 현재 위험도가 높습니다. 외출 시 주의하세요."
 
@@ -38,14 +45,24 @@ public class NotificationHistory {
     @Column(name = "CREATED_AT", updatable = false)
     private LocalDateTime createdAt; // 알림이 발송된 정확한 날짜와 시간
 
-    // 엔티티가 DB에 저장되기 직전에 현재 시간을 자동으로 세팅
+    @Enumerated(EnumType.STRING)
+    @Column(name = "LOCATION_TYPE", length = 10)
+    private LocationType locationType; // 알림 발송 기준 위치 (HOME/WORK). null이면 HOME으로 간주 (기존 행 호환)
+
+    // createdAt이 명시되지 않은 경우에만 현재 시각으로 세팅 (스케줄러는 알람 시각을 직접 주입)
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     // 알림 읽음 처리 비즈니스 메서드
     public void markAsRead() {
         this.isRead = true;
+    }
+
+    public LocationType getEffectiveLocationType() {
+        return locationType != null ? locationType : LocationType.HOME;
     }
 }

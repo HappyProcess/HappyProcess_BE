@@ -4,6 +4,7 @@ import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
 import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.healthcondition.service.HealthConditionService;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.service.LocationService;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -41,23 +42,62 @@ public class RiskAnalysisService {
         String targetAreaNo = locationService.getMainAreaNo(member);
 
         WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
+        logWeatherSnapshot(member, null, targetAreaNo, liveWeather);
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
-        return analyzeRisk(userConditions, liveWeather);
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        result.setRegionName(liveWeather.getRegionName());
+        return result;
+    }
+
+    public RiskAnalysisResult analyzeRiskForMemberAt(Member member, LocationType locationType) {
+        String targetAreaNo = locationService.getAreaNoByType(member, locationType);
+
+        WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
+        logWeatherSnapshot(member, locationType, targetAreaNo, liveWeather);
+
+        List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
+
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        result.setRegionName(liveWeather.getRegionName());
+        return result;
+    }
+
+    private void logWeatherSnapshot(Member member, LocationType locationType, String areaNo, WeatherResponseDto w) {
+        log.info("[위험도분석] memberId={} locationType={} areaNo={} region={} pm10={} pm25={} pollen={} uv={} temp={} humidity={} condition={}",
+                member.getMemberId(),
+                locationType,
+                areaNo,
+                w.getRegionName(),
+                w.getParsedPm10Value(),
+                w.getParsedPm25Value(),
+                w.getParsedPollenRisk(),
+                w.getParsedUvRisk(),
+                w.getParsedCurrentTemp(),
+                w.getParsedHumidity(),
+                w.getWeatherCondition());
     }
 
     private RiskAnalysisResult analyzeRisk(List<HealthCondition> conditions, WeatherResponseDto weather) {
         if (conditions == null || conditions.isEmpty()) {
             DiseaseRiskRule normalRule = ruleMap.get(0L);
-            if (normalRule != null && normalRule.isAtRisk(weather)) {
-                return new RiskAnalysisResult(true, List.of(normalRule.getDiseaseName()), List.of(normalRule.getConditionId()));
+            if (normalRule != null) {
+                List<RiskAnalysisResult.FactorGuide> factors = normalRule.evaluateFactorGuides(weather);
+
+                if (factors != null && !factors.isEmpty()) {
+                    RiskAnalysisResult.RiskDetail detail = new RiskAnalysisResult.RiskDetail(
+                            normalRule.getConditionId(),
+                            normalRule.getDiseaseName(),
+                            factors
+                    );
+                    return new RiskAnalysisResult(true, List.of(detail));
+                }
             }
-            return new RiskAnalysisResult(false, null, null);
+            return new RiskAnalysisResult(false, null);
         }
 
-        List<String> riskDiseaseNames = new ArrayList<>();
-        List<Long> riskDiseaseIds = new ArrayList<>();
+        List<RiskAnalysisResult.RiskDetail> riskDetails = new ArrayList<>();
 
         for (HealthCondition healthCondition : conditions) {
             Long conditionId = healthCondition.getCondition().getConditionId();
@@ -65,16 +105,21 @@ public class RiskAnalysisService {
 
             if (rule == null) continue;
 
-            if (rule.isAtRisk(weather)) {
-                riskDiseaseNames.add(rule.getDiseaseName());
-                riskDiseaseIds.add(rule.getConditionId());
+            List<RiskAnalysisResult.FactorGuide> factors = rule.evaluateFactorGuides(weather);
+
+            if (factors != null && !factors.isEmpty()) {
+                riskDetails.add(new RiskAnalysisResult.RiskDetail(
+                        rule.getConditionId(),
+                        rule.getDiseaseName(),
+                        factors
+                ));
             }
         }
 
-        if (!riskDiseaseNames.isEmpty()) {
-            return new RiskAnalysisResult(true, riskDiseaseNames, riskDiseaseIds);
+        if (!riskDetails.isEmpty()) {
+            return new RiskAnalysisResult(true, riskDetails);
         }
 
-        return new RiskAnalysisResult(false, null, null);
+        return new RiskAnalysisResult(false, null);
     }
 }

@@ -5,6 +5,7 @@ import com.haapyProcess.domain.alert.entity.Alert;
 import com.haapyProcess.domain.alert.entity.NotificationHistory;
 import com.haapyProcess.domain.alert.repository.AlertRepository;
 import com.haapyProcess.domain.alert.repository.NotificationHistoryRepository;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.global.exception.CustomException;
 import com.haapyProcess.global.exception.ErrorCode;
@@ -23,13 +24,39 @@ public class AlertService {
 
     // 1. 알림 설정 추가
     @Transactional
-    public AlertResponse addAlert(Member member, String alertTime) {
+    public AlertResponse addAlert(Member member, String alertTime, LocationType locationType) {
+        if (alertRepository.existsByMemberAndAlertTimeAndLocationType(member, alertTime, locationType)) {
+            throw new CustomException(ErrorCode.DUPLICATE_ALERT_TIME);
+        }
         Alert alert = Alert.builder()
                 .member(member)
                 .alertTime(alertTime)
                 .isEnable(true)
+                .locationType(locationType)
                 .build();
         return AlertResponse.from(alertRepository.save(alert));
+    }
+
+    // 1-2. 알림 시간 수정
+    @Transactional
+    public AlertResponse updateAlert(Member member, Long alertId, String alertTime, LocationType locationType) {
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ALERT_NOT_FOUND));
+
+        if (!alert.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
+        }
+
+        boolean timeChanged = !alert.getAlertTime().equals(alertTime);
+        boolean locationChanged = alert.getEffectiveLocationType() != locationType;
+        if ((timeChanged || locationChanged)
+                && alertRepository.existsByMemberAndAlertTimeAndLocationType(member, alertTime, locationType)) {
+            throw new CustomException(ErrorCode.DUPLICATE_ALERT_TIME);
+        }
+
+        alert.updateAlertTime(alertTime);
+        alert.updateLocationType(locationType);
+        return AlertResponse.from(alert);
     }
 
     // 2. 내 알림 설정 목록 조회
@@ -72,7 +99,7 @@ public class AlertService {
         history.markAsRead();
     }
 
-    // 6. 알림 삭제
+    // 6. 알림 설정 시간 삭제
     @Transactional
     public void deleteAlert(Member member, Long alertId) {
         Alert alert = alertRepository.findById(alertId)
@@ -82,5 +109,18 @@ public class AlertService {
             throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
         }
         alertRepository.delete(alert);
+    }
+
+    // 7. 알림 발송 내역(기록) 삭제
+    @Transactional
+    public void deleteHistory(Member member, Long historyId) {
+        NotificationHistory history = historyRepository.findById(historyId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 알림 기록입니다."));
+
+        if (!history.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
+        }
+
+        historyRepository.delete(history);
     }
 }

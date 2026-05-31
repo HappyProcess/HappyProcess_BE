@@ -17,4 +17,7 @@ public interface FamilyRepository extends JpaRepository<Family, Long> {
 
     // 3. 이미 등록한 가족인지 중복 체크용
     boolean existsByUserAndRelative(Member user, Member relative);
+
+    // 4. 특정 회원을 가족으로 등록하고 알림을 켜둔 모든 등록 건 (스케줄러 팬아웃용)
+    List<Family> findAllByRelativeAndIsAlertEnabledTrue(Member relative);
 }

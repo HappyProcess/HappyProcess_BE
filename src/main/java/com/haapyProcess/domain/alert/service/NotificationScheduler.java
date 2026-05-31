@@ -14,7 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,17 +36,21 @@ public class NotificationScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void processScheduledAlerts() {
-        String currentTime = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH:mm"));
-        log.info("[스케줄러] tick {}", currentTime);
+        // 알람 시각 1분 전에 미리 발송 처리하기 위해 +1분 시각을 매칭 대상으로 사용
+        ZonedDateTime targetZdt = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).plusMinutes(1).withSecond(0).withNano(0);
+        String targetTime = targetZdt.format(DateTimeFormatter.ofPattern("HH:mm"));
+        LocalDateTime alertMoment = targetZdt.toLocalDateTime();
 
-        List<Alert> activeAlerts = alertRepository.findAllByAlertTimeAndIsEnableTrue(currentTime);
+        log.info("[스케줄러] tick (target {})", targetTime);
+
+        List<Alert> activeAlerts = alertRepository.findAllByAlertTimeAndIsEnableTrue(targetTime);
 
         if (activeAlerts.isEmpty()) {
-            log.info("[스케줄러] {} 발송 대상 없음", currentTime);
+            log.info("[스케줄러] {} 발송 대상 없음", targetTime);
             return;
         }
 
-        log.info("[스케줄러] {} 알림 발송 대상자 {}명 탐색 완료", currentTime, activeAlerts.size());
+        log.info("[스케줄러] {} 알림 발송 대상자 {}명 탐색 완료", targetTime, activeAlerts.size());
 
         for (Alert alert : activeAlerts) {
             Member targetMember = alert.getMember();
@@ -54,7 +59,7 @@ public class NotificationScheduler {
                 RiskAnalysisResult result = riskAnalysisService.analyzeRiskForMember(targetMember);
 
                 if (result.isRisk()) {
-                    saveNotificationHistory(targetMember, result);
+                    saveNotificationHistory(targetMember, result, alertMoment);
                     // TODO: 실제 푸시 알림(FCM, SMS 등)을 쏘는 로직이 있다면 이 부분에 추가
                 }
 
@@ -65,9 +70,10 @@ public class NotificationScheduler {
     }
 
     /**
-     * 알림 기록을 예쁘게 포장해서 DB에 저장하는 헬퍼 메서드
+     * 알림 기록을 예쁘게 포장해서 DB에 저장하는 헬퍼 메서드.
+     * createdAt은 실제 적재 시각이 아닌 알람이 울려야 할 시각(alertMoment)으로 세팅.
      */
-    private void saveNotificationHistory(Member member, RiskAnalysisResult result) {
+    private void saveNotificationHistory(Member member, RiskAnalysisResult result, LocalDateTime alertMoment) {
         String diseaseNamesStr = String.join(", ", result.getCauseDiseaseNames());
         String diseaseIdsStr = result.getCauseDiseaseIds().stream()
                 .map(String::valueOf)
@@ -81,6 +87,7 @@ public class NotificationScheduler {
                 .diseaseNames(diseaseNamesStr)
                 .message(message)
                 .isRead(false)
+                .createdAt(alertMoment)
                 .build();
 
         historyRepository.save(history);

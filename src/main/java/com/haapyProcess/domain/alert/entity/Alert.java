@@ -1,5 +1,6 @@
 package com.haapyProcess.domain.alert.entity;
 
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,6 +28,10 @@ public class Alert {
     @Column(name = "IS_ENABLE", nullable = false)
     private boolean isEnable; // 알림 켜짐(true) / 꺼짐(false) 상태
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "LOCATION_TYPE", length = 10)
+    private LocationType locationType; // HOME / WORK. null이면 HOME으로 간주 (마이그레이션 전 기존 행 호환)
+
     // 알림 활성화 상태를 변경하는 비즈니스 메서드
     public void toggleEnable(boolean isEnable) {
         this.isEnable = isEnable;
@@ -34,5 +39,13 @@ public class Alert {
 
     public void updateAlertTime(String alertTime) {
         this.alertTime = alertTime;
+    }
+
+    public void updateLocationType(LocationType locationType) {
+        this.locationType = locationType;
+    }
+
+    public LocationType getEffectiveLocationType() {
+        return locationType != null ? locationType : LocationType.HOME;
     }
 }

@@ -4,6 +4,7 @@ import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
 import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.healthcondition.service.HealthConditionService;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.service.LocationService;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -39,6 +40,16 @@ public class RiskAnalysisService {
 
     public RiskAnalysisResult analyzeRiskForMember(Member member) {
         String targetAreaNo = locationService.getMainAreaNo(member);
+
+        WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
+
+        List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
+
+        return analyzeRisk(userConditions, liveWeather);
+    }
+
+    public RiskAnalysisResult analyzeRiskForMemberAt(Member member, LocationType locationType) {
+        String targetAreaNo = locationService.getAreaNoByType(member, locationType);
 
         WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
 

@@ -6,6 +6,7 @@ import com.haapyProcess.domain.alert.repository.AlertRepository;
 import com.haapyProcess.domain.alert.repository.NotificationHistoryRepository;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.service.RiskAnalysisService;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,12 +55,13 @@ public class NotificationScheduler {
 
         for (Alert alert : activeAlerts) {
             Member targetMember = alert.getMember();
+            LocationType locationType = alert.getEffectiveLocationType();
 
             try {
-                RiskAnalysisResult result = riskAnalysisService.analyzeRiskForMember(targetMember);
+                RiskAnalysisResult result = riskAnalysisService.analyzeRiskForMemberAt(targetMember, locationType);
 
                 if (result.isRisk()) {
-                    saveNotificationHistory(targetMember, result, alertMoment);
+                    saveNotificationHistory(targetMember, result, alertMoment, locationType);
                     // TODO: 실제 푸시 알림(FCM, SMS 등)을 쏘는 로직이 있다면 이 부분에 추가
                 }
 
@@ -73,13 +75,14 @@ public class NotificationScheduler {
      * 알림 기록을 예쁘게 포장해서 DB에 저장하는 헬퍼 메서드.
      * createdAt은 실제 적재 시각이 아닌 알람이 울려야 할 시각(alertMoment)으로 세팅.
      */
-    private void saveNotificationHistory(Member member, RiskAnalysisResult result, LocalDateTime alertMoment) {
+    private void saveNotificationHistory(Member member, RiskAnalysisResult result, LocalDateTime alertMoment, LocationType locationType) {
         String diseaseNamesStr = String.join(", ", result.getCauseDiseaseNames());
         String diseaseIdsStr = result.getCauseDiseaseIds().stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining(","));
 
-        String message = String.format("[%s] 현재 날씨가 위험 기준을 초과했습니다. 외출 시 주의하세요!", diseaseNamesStr);
+        String locationLabel = locationType == LocationType.WORK ? "직장" : "집";
+        String message = String.format("[%s/%s] 현재 날씨가 위험 기준을 초과했습니다. 외출 시 주의하세요!", locationLabel, diseaseNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
                 .member(member)

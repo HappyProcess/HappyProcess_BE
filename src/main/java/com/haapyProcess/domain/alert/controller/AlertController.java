@@ -41,7 +41,7 @@ public class AlertController {
     @PostMapping
     public ResponseEntity<AlertResponse> addAlert(@RequestBody @Valid AddAlertRequest request) {
         Member currentMember = memberService.getCurrentMember();
-        return ResponseEntity.ok(alertService.addAlert(currentMember, request.alertTime()));
+        return ResponseEntity.ok(alertService.addAlert(currentMember, request.alertTime(), request.locationType()));
     }
 
     // 내 알림 설정 목록 조회
@@ -78,7 +78,7 @@ public class AlertController {
             @Parameter(description = "수정할 알림 ID", example = "1") @PathVariable Long alertId,
             @RequestBody @Valid UpdateAlertRequest request) {
         Member currentMember = memberService.getCurrentMember();
-        return ResponseEntity.ok(alertService.updateAlert(currentMember, alertId, request.alertTime()));
+        return ResponseEntity.ok(alertService.updateAlert(currentMember, alertId, request.alertTime(), request.locationType()));
     }
 
     // 알림 켜기/끄기 토글

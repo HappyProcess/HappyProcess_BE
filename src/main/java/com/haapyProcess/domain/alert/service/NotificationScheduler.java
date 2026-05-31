@@ -82,8 +82,6 @@ public class NotificationScheduler {
                 .map(detail -> String.valueOf(detail.getDiseaseId()))
                 .collect(Collectors.joining(","));
 
-        String regionName = result.getRegionName();
-
         // 위험 판정된 모든 질환의 원인 요인(미세먼지/초미세먼지 등)을 중복 없이 모은다.
         String factorNamesStr = result.getRiskDetails().stream()
                 .flatMap(detail -> detail.getFactorGuides().stream())
@@ -91,17 +89,17 @@ public class NotificationScheduler {
                 .distinct()
                 .collect(Collectors.joining(", "));
 
-        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요. 외출 시 주의하세요!", diseaseNamesStr, factorNamesStr);
+        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요.", diseaseNamesStr, factorNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
                 .member(member)
                 .diseaseIds(diseaseIdsStr)
                 .diseaseNames(diseaseNamesStr)
+                .factorNames(factorNamesStr)
                 .message(message)
                 .isRead(false)
                 .createdAt(alertMoment)
                 .locationType(locationType)
-                .regionName(regionName)
                 .build();
 
         historyRepository.save(history);

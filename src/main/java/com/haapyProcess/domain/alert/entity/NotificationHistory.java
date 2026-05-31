@@ -30,6 +30,9 @@ public class NotificationHistory {
     @Column(name = "DISEASE_NAMES", length = 100)
     private String diseaseNames; // 예: "천식, 고혈압"
 
+    @Column(name = "FACTOR_NAMES", length = 100)
+    private String factorNames; // 기준 초과한 날씨 요인. 예: "미세먼지, 초미세먼지"
+
     @Column(name = "MESSAGE", length = 255, nullable = false)
     private String message; // 예: "[천식] 현재 위험도가 높습니다. 외출 시 주의하세요."
 
@@ -42,9 +45,6 @@ public class NotificationHistory {
     @Enumerated(EnumType.STRING)
     @Column(name = "LOCATION_TYPE", length = 10)
     private LocationType locationType; // 알림 발송 기준 위치 (HOME/WORK). null이면 HOME으로 간주 (기존 행 호환)
-
-    @Column(name = "REGION_NAME", length = 50)
-    private String regionName; // 알림 발송 기준 지역(동) 이름 (예: "대동면")
 
     // createdAt이 명시되지 않은 경우에만 현재 시각으로 세팅 (스케줄러는 알람 시각을 직접 주입)
     @PrePersist

@@ -10,7 +10,7 @@ public class ElderlyRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 14L;
+        return 13L;
     }
 
     @Override

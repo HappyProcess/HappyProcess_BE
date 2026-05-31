@@ -10,7 +10,7 @@ public class ChildRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 13L;
+        return 12L;
     }
 
     @Override

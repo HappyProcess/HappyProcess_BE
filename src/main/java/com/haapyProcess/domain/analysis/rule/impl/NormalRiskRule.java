@@ -10,7 +10,7 @@ public class NormalRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 1L;
+        return 0L;
     }
 
     @Override

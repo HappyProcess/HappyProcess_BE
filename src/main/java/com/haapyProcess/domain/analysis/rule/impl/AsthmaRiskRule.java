@@ -10,7 +10,7 @@ public class AsthmaRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 2L;
+        return 1L;
     }
 
     @Override

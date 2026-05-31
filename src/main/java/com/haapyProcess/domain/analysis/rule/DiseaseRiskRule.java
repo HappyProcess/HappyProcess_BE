@@ -6,7 +6,7 @@ public interface DiseaseRiskRule {
 
     /**
      * 해당 규칙이 담당하는 질병의 고유 ID (Condition ID)를 반환합니다.
-     * 일반인(질병 없음)의 경우 0L 등 특별한 값을 사용할 수 있습니다.
+     * 일반인(질병 없음)은 0L, 실제 질병은 1L부터 시작합니다.
      */
     Long getConditionId();
 

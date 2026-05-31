@@ -10,7 +10,7 @@ public class HeartDiseaseRiskRule implements DiseaseRiskRule {
 
     @Override
     public Long getConditionId() {
-        return 9L;
+        return 8L;
     }
 
     @Override

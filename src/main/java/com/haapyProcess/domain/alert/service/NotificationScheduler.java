@@ -13,9 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.ZoneId;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -37,7 +37,6 @@ public class NotificationScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void processScheduledAlerts() {
-        // 알람 시각 1분 전에 미리 발송 처리하기 위해 +1분 시각을 매칭 대상으로 사용
         ZonedDateTime targetZdt = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).plusMinutes(1).withSecond(0).withNano(0);
         String targetTime = targetZdt.format(DateTimeFormatter.ofPattern("HH:mm"));
         LocalDateTime alertMoment = targetZdt.toLocalDateTime();
@@ -52,7 +51,6 @@ public class NotificationScheduler {
         }
 
         log.info("[스케줄러] {} 알림 발송 대상자 {}명 탐색 완료", targetTime, activeAlerts.size());
-
         for (Alert alert : activeAlerts) {
             Member targetMember = alert.getMember();
             LocationType locationType = alert.getEffectiveLocationType();
@@ -62,7 +60,6 @@ public class NotificationScheduler {
 
                 if (result.isRisk()) {
                     saveNotificationHistory(targetMember, result, alertMoment, locationType);
-                    // TODO: 실제 푸시 알림(FCM, SMS 등)을 쏘는 로직이 있다면 이 부분에 추가
                 }
 
             } catch (Exception e) {
@@ -76,9 +73,13 @@ public class NotificationScheduler {
      * createdAt은 실제 적재 시각이 아닌 알람이 울려야 할 시각(alertMoment)으로 세팅.
      */
     private void saveNotificationHistory(Member member, RiskAnalysisResult result, LocalDateTime alertMoment, LocationType locationType) {
-        String diseaseNamesStr = String.join(", ", result.getCauseDiseaseNames());
-        String diseaseIdsStr = result.getCauseDiseaseIds().stream()
-                .map(String::valueOf)
+
+        String diseaseNamesStr = result.getRiskDetails().stream()
+                .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
+                .collect(Collectors.joining(", "));
+
+        String diseaseIdsStr = result.getRiskDetails().stream()
+                .map(detail -> String.valueOf(detail.getDiseaseId()))
                 .collect(Collectors.joining(","));
 
         String locationLabel = locationType == LocationType.WORK ? "직장" : "집";

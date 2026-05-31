@@ -32,7 +32,7 @@ public class AnalysisController {
                   1. 헤더의 토큰을 통해 유저 식별 및 대표 지역 코드 추출
                   2. 외부 API를 통해 해당 지역의 실시간 통합 날씨 조회
                   3. 유저가 보유한 질병별 판별기(Rule)를 가동하여 위험 여부 연산
-                  4. 위험에 해당하는 질병이 1개라도 있으면 `isRisk: true` 와 함께 원인 질병 반환
+                  4. 위험에 해당하는 질병이 1개라도 있으면 `isRisk: true` 와 함께 상세 원인과 행동 강령 반환
                 
                 ---
                 
@@ -40,8 +40,12 @@ public class AnalysisController {
                 | **키** | **설명** | **타입** | **비고** |
                 |---|---|---|---|
                 | **isRisk** | 현재 날씨가 유저의 질병에 위험한지 여부 | boolean | 안전하면 false |
-                | **causeDiseaseNames** | 위험 기준을 초과한 원인 질병 이름 목록 | List<String> | isRisk가 false면 필드 자체가 오지 않음 (null) |
-                | **causeDiseaseIds** | 위험 기준을 초과한 원인 질병 ID 목록 | List<Long> | isRisk가 false면 필드 자체가 오지 않음 (null) |
+                | **riskDetails** | 위험 기준을 초과한 질병별 상세 정보 배열 | List<Object> | isRisk가 false면 오지 않음 |
+                | └ diseaseId | 원인 질병 ID | Long | |
+                | └ diseaseName | 원인 질병 이름 | String | |
+                | └ factorGuides | 날씨 원인 및 맞춤 행동 강령 배열 | List<Object> | |
+                | &nbsp;&nbsp;&nbsp;└ factorName | 초과한 날씨 요인 (예: 미세먼지) | String | |
+                | &nbsp;&nbsp;&nbsp;└ guide | 행동 추천 가이드 | String | |
                 """
     )
     @ApiResponse(responseCode = "200", description = "위험도 분석 성공")

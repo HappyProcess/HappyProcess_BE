@@ -61,14 +61,22 @@ public class RiskAnalysisService {
     private RiskAnalysisResult analyzeRisk(List<HealthCondition> conditions, WeatherResponseDto weather) {
         if (conditions == null || conditions.isEmpty()) {
             DiseaseRiskRule normalRule = ruleMap.get(0L);
-            if (normalRule != null && normalRule.isAtRisk(weather)) {
-                return new RiskAnalysisResult(true, List.of(normalRule.getDiseaseName()), List.of(normalRule.getConditionId()));
+            if (normalRule != null) {
+                List<RiskAnalysisResult.FactorGuide> factors = normalRule.evaluateFactorGuides(weather);
+
+                if (factors != null && !factors.isEmpty()) {
+                    RiskAnalysisResult.RiskDetail detail = new RiskAnalysisResult.RiskDetail(
+                            normalRule.getConditionId(),
+                            normalRule.getDiseaseName(),
+                            factors
+                    );
+                    return new RiskAnalysisResult(true, List.of(detail));
+                }
             }
-            return new RiskAnalysisResult(false, null, null);
+            return new RiskAnalysisResult(false, null);
         }
 
-        List<String> riskDiseaseNames = new ArrayList<>();
-        List<Long> riskDiseaseIds = new ArrayList<>();
+        List<RiskAnalysisResult.RiskDetail> riskDetails = new ArrayList<>();
 
         for (HealthCondition healthCondition : conditions) {
             Long conditionId = healthCondition.getCondition().getConditionId();
@@ -76,16 +84,21 @@ public class RiskAnalysisService {
 
             if (rule == null) continue;
 
-            if (rule.isAtRisk(weather)) {
-                riskDiseaseNames.add(rule.getDiseaseName());
-                riskDiseaseIds.add(rule.getConditionId());
+            List<RiskAnalysisResult.FactorGuide> factors = rule.evaluateFactorGuides(weather);
+
+            if (factors != null && !factors.isEmpty()) {
+                riskDetails.add(new RiskAnalysisResult.RiskDetail(
+                        rule.getConditionId(),
+                        rule.getDiseaseName(),
+                        factors
+                ));
             }
         }
 
-        if (!riskDiseaseNames.isEmpty()) {
-            return new RiskAnalysisResult(true, riskDiseaseNames, riskDiseaseIds);
+        if (!riskDetails.isEmpty()) {
+            return new RiskAnalysisResult(true, riskDetails);
         }
 
-        return new RiskAnalysisResult(false, null, null);
+        return new RiskAnalysisResult(false, null);
     }
 }

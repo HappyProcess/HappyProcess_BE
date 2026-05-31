@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +80,19 @@ public class FamilyService {
     @Transactional(readOnly = true)
     public List<FamilyListResponse> getMyFamilies() {
         Member me = memberService.getCurrentMember();
-        List<Family> families = familyRepository.findAllByUser(me);
+
+        // 1쿼리: 가족 + 질환 + 질환명까지 fetch join (N+1 제거)
+        List<Family> families = familyRepository.findAllByUserWithConditions(me);
+        if (families.isEmpty()) {
+            return List.of();
+        }
+
+        // 1쿼리: 모든 가족의 알림을 IN 절로 한 번에 조회 후 회원별로 그룹핑
+        List<Member> relatives = families.stream().map(Family::getRelative).toList();
+        Map<Long, List<String>> alertTimesByMember = alertRepository.findAllByMemberInOrderByAlertTimeAsc(relatives).stream()
+                .collect(Collectors.groupingBy(
+                        a -> a.getMember().getMemberId(),
+                        Collectors.mapping(Alert::getAlertTime, Collectors.toList())));
 
         return families.stream().map(family -> {
             Member relative = family.getRelative();
@@ -87,15 +101,11 @@ public class FamilyService {
                     .map(hc -> hc.getCondition().getConditionName())
                     .toList();
 
-            List<String> alertTimes = alertRepository.findAllByMemberOrderByAlertTimeAsc(relative).stream()
-                    .map(Alert::getAlertTime)
-                    .toList();
-
             return FamilyListResponse.builder()
                     .familyId(family.getFamilyId())
                     .name(relative.getName())
                     .healthConditionNames(conditionNames)
-                    .alertTimes(alertTimes)
+                    .alertTimes(alertTimesByMember.getOrDefault(relative.getMemberId(), List.of()))
                     .build();
         }).toList();
     }

@@ -9,5 +9,6 @@ import java.util.List;
 public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findAllByAlertTimeAndIsEnableTrue(String alertTime);
     List<Alert> findAllByMemberOrderByAlertTimeAsc(Member member);
+    List<Alert> findAllByMemberInOrderByAlertTimeAsc(List<Member> members);
     boolean existsByMemberAndAlertTimeAndLocationType(Member member, String alertTime, LocationType locationType);
 }

@@ -42,6 +42,7 @@ public class RiskAnalysisService {
         String targetAreaNo = locationService.getMainAreaNo(member);
 
         WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
+        logWeatherSnapshot(member, null, targetAreaNo, liveWeather);
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
@@ -52,10 +53,26 @@ public class RiskAnalysisService {
         String targetAreaNo = locationService.getAreaNoByType(member, locationType);
 
         WeatherResponseDto liveWeather = weatherService.getCombinedWeatherData(targetAreaNo);
+        logWeatherSnapshot(member, locationType, targetAreaNo, liveWeather);
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
         return analyzeRisk(userConditions, liveWeather);
+    }
+
+    private void logWeatherSnapshot(Member member, LocationType locationType, String areaNo, WeatherResponseDto w) {
+        log.info("[위험도분석] memberId={} locationType={} areaNo={} region={} pm10={} pm25={} pollen={} uv={} temp={} humidity={} condition={}",
+                member.getMemberId(),
+                locationType,
+                areaNo,
+                w.getRegionName(),
+                w.getParsedPm10Value(),
+                w.getParsedPm25Value(),
+                w.getParsedPollenRisk(),
+                w.getParsedUvRisk(),
+                w.getParsedCurrentTemp(),
+                w.getParsedHumidity(),
+                w.getWeatherCondition());
     }
 
     private RiskAnalysisResult analyzeRisk(List<HealthCondition> conditions, WeatherResponseDto weather) {

@@ -31,13 +31,13 @@ public class NotificationScheduler {
     private final RiskAnalysisService riskAnalysisService;
 
     /**
-     * 매 1분마다(초가 00일 때) 실행되는 스케줄러
+     * 매 분 50초에 실행되는 스케줄러 (알람 시각 10초 전 선처리)
      * cron = "초 분 시 일 월 요일"
      */
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "50 * * * * *")
     @Transactional
     public void processScheduledAlerts() {
-        ZonedDateTime targetZdt = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).plusMinutes(1).withSecond(0).withNano(0);
+        ZonedDateTime targetZdt = ZonedDateTime.now(ZoneId.of("Asia/Seoul")).plusSeconds(10).withSecond(0).withNano(0);
         String targetTime = targetZdt.format(DateTimeFormatter.ofPattern("HH:mm"));
         LocalDateTime alertMoment = targetZdt.toLocalDateTime();
 

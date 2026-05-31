@@ -92,6 +92,7 @@ public class NotificationScheduler {
                 .message(message)
                 .isRead(false)
                 .createdAt(alertMoment)
+                .locationType(locationType)
                 .build();
 
         historyRepository.save(history);

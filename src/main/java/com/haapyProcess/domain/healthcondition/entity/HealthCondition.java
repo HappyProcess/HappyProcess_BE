@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "HEALTH_CONDITION")
+@Table(name = "MEMBER_DISEASE")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

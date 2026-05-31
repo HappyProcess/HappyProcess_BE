@@ -82,12 +82,16 @@ public class NotificationScheduler {
                 .map(detail -> String.valueOf(detail.getDiseaseId()))
                 .collect(Collectors.joining(","));
 
-        String locationLabel = locationType == LocationType.WORK ? "직장" : "집";
         String regionName = result.getRegionName();
-        String locationDisplay = (regionName != null && !regionName.isBlank())
-                ? String.format("%s·%s", locationLabel, regionName)
-                : locationLabel;
-        String message = String.format("[%s/%s] 현재 날씨가 위험 기준을 초과했습니다. 외출 시 주의하세요!", locationDisplay, diseaseNamesStr);
+
+        // 위험 판정된 모든 질환의 원인 요인(미세먼지/초미세먼지 등)을 중복 없이 모은다.
+        String factorNamesStr = result.getRiskDetails().stream()
+                .flatMap(detail -> detail.getFactorGuides().stream())
+                .map(RiskAnalysisResult.FactorGuide::getFactorName)
+                .distinct()
+                .collect(Collectors.joining(", "));
+
+        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요. 외출 시 주의하세요!", diseaseNamesStr, factorNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
                 .member(member)

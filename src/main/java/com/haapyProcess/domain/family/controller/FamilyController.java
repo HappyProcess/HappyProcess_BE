@@ -4,6 +4,7 @@ import com.haapyProcess.domain.alert.dto.AddAlertRequest;
 import com.haapyProcess.domain.alert.dto.AlertResponse;
 import com.haapyProcess.domain.alert.dto.UpdateAlertRequest;
 import com.haapyProcess.domain.family.dto.AddFamilyRequest;
+import com.haapyProcess.domain.family.dto.FamilyListResponse;
 import com.haapyProcess.domain.family.dto.FamilyMemberResponse;
 import com.haapyProcess.domain.family.service.FamilyService;
 import com.haapyProcess.domain.healthcondition.dto.UpdateConditionsRequest;
@@ -37,13 +38,24 @@ public class FamilyController {
     }
 
     @Operation(
-            summary = "가족 목록 및 위험도 조회",
-            description = "내 가족 목록과 함께 각 가족 거주지의 실시간 날씨 위험도(isRisk), 등록된 지역(locations)과 알림 시간(alerts)을 반환합니다."
+            summary = "가족 목록 조회 (리스트)",
+            description = "가족 목록을 가볍게 반환합니다. 각 항목은 familyId, 이름, 질병 목록, 알림 시간 목록만 포함합니다. 상세 정보는 상세 조회 API를 사용하세요."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping
-    public ResponseEntity<List<FamilyMemberResponse>> getMyFamilies() {
+    public ResponseEntity<List<FamilyListResponse>> getMyFamilies() {
         return ResponseEntity.ok(familyService.getMyFamilies());
+    }
+
+    @Operation(
+            summary = "가족 상세 조회",
+            description = "특정 가족의 전체 정보를 반환합니다. 나이, 알림 활성화 여부, 실시간 날씨 위험도(isRisk)와 원인 질병, 등록된 지역(locations), 알림 시간(alerts)을 모두 포함합니다."
+    )
+    @ApiResponse(responseCode = "200", description = "조회 성공")
+    @ApiResponse(responseCode = "404", description = "권한이 없거나 존재하지 않는 가족 ID")
+    @GetMapping("/{familyId}")
+    public ResponseEntity<FamilyMemberResponse> getFamilyDetail(@PathVariable Long familyId) {
+        return ResponseEntity.ok(familyService.getFamilyDetail(familyId));
     }
 
     @Operation(

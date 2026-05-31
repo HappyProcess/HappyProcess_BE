@@ -46,7 +46,9 @@ public class RiskAnalysisService {
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
-        return analyzeRisk(userConditions, liveWeather);
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        result.setRegionName(liveWeather.getRegionName());
+        return result;
     }
 
     public RiskAnalysisResult analyzeRiskForMemberAt(Member member, LocationType locationType) {
@@ -57,7 +59,9 @@ public class RiskAnalysisService {
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
-        return analyzeRisk(userConditions, liveWeather);
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        result.setRegionName(liveWeather.getRegionName());
+        return result;
     }
 
     private void logWeatherSnapshot(Member member, LocationType locationType, String areaNo, WeatherResponseDto w) {

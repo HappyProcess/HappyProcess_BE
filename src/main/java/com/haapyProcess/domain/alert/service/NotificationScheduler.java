@@ -83,7 +83,11 @@ public class NotificationScheduler {
                 .collect(Collectors.joining(","));
 
         String locationLabel = locationType == LocationType.WORK ? "직장" : "집";
-        String message = String.format("[%s/%s] 현재 날씨가 위험 기준을 초과했습니다. 외출 시 주의하세요!", locationLabel, diseaseNamesStr);
+        String regionName = result.getRegionName();
+        String locationDisplay = (regionName != null && !regionName.isBlank())
+                ? String.format("%s·%s", locationLabel, regionName)
+                : locationLabel;
+        String message = String.format("[%s/%s] 현재 날씨가 위험 기준을 초과했습니다. 외출 시 주의하세요!", locationDisplay, diseaseNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
                 .member(member)
@@ -93,6 +97,7 @@ public class NotificationScheduler {
                 .isRead(false)
                 .createdAt(alertMoment)
                 .locationType(locationType)
+                .regionName(regionName)
                 .build();
 
         historyRepository.save(history);

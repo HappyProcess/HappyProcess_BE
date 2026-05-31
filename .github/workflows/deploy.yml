@@ -47,6 +47,7 @@ jobs:
               app:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/happyprocess:latest
                 environment:
+                  TZ: Asia/Seoul
                   SPRING_PROFILES_ACTIVE: prod
                   DB_URL: ${{ secrets.DB_URL }}
                   DB_USERNAME: ${{ secrets.DB_USERNAME }}

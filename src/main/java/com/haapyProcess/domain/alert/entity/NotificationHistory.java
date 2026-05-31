@@ -43,6 +43,9 @@ public class NotificationHistory {
     @Column(name = "LOCATION_TYPE", length = 10)
     private LocationType locationType; // 알림 발송 기준 위치 (HOME/WORK). null이면 HOME으로 간주 (기존 행 호환)
 
+    @Column(name = "REGION_NAME", length = 50)
+    private String regionName; // 알림 발송 기준 지역(동) 이름 (예: "대동면")
+
     // createdAt이 명시되지 않은 경우에만 현재 시각으로 세팅 (스케줄러는 알람 시각을 직접 주입)
     @PrePersist
     protected void onCreate() {

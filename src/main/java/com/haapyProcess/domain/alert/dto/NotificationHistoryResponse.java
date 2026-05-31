@@ -9,8 +9,7 @@ public record NotificationHistoryResponse(
         String message,
         boolean isRead,
         String createdAt,
-        LocationType locationType,
-        String regionName
+        LocationType locationType
 ) {
     public static NotificationHistoryResponse from(NotificationHistory history) {
         String formattedDate = history.getCreatedAt().format(java.time.format.DateTimeFormatter.ofPattern("MM월 dd일 HH:mm"));
@@ -20,8 +19,7 @@ public record NotificationHistoryResponse(
                 history.getMessage(),
                 history.isRead(),
                 formattedDate,
-                history.getEffectiveLocationType(),
-                history.getRegionName()
+                history.getEffectiveLocationType()
         );
     }
 }

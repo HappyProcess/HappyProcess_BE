@@ -24,12 +24,34 @@ public class AlertService {
     // 1. 알림 설정 추가
     @Transactional
     public AlertResponse addAlert(Member member, String alertTime) {
+        if (alertRepository.existsByMemberAndAlertTime(member, alertTime)) {
+            throw new CustomException(ErrorCode.DUPLICATE_ALERT_TIME);
+        }
         Alert alert = Alert.builder()
                 .member(member)
                 .alertTime(alertTime)
                 .isEnable(true)
                 .build();
         return AlertResponse.from(alertRepository.save(alert));
+    }
+
+    // 1-2. 알림 시간 수정
+    @Transactional
+    public AlertResponse updateAlert(Member member, Long alertId, String alertTime) {
+        Alert alert = alertRepository.findById(alertId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ALERT_NOT_FOUND));
+
+        if (!alert.getMember().getMemberId().equals(member.getMemberId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED_USER);
+        }
+
+        if (!alert.getAlertTime().equals(alertTime)
+                && alertRepository.existsByMemberAndAlertTime(member, alertTime)) {
+            throw new CustomException(ErrorCode.DUPLICATE_ALERT_TIME);
+        }
+
+        alert.updateAlertTime(alertTime);
+        return AlertResponse.from(alert);
     }
 
     // 2. 내 알림 설정 목록 조회

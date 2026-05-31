@@ -5,8 +5,6 @@ import com.haapyProcess.domain.alert.dto.AlertResponse;
 import com.haapyProcess.domain.alert.dto.UpdateAlertRequest;
 import com.haapyProcess.domain.alert.entity.Alert;
 import com.haapyProcess.domain.alert.repository.AlertRepository;
-import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
-import com.haapyProcess.domain.analysis.service.RiskAnalysisService;
 import com.haapyProcess.domain.condition.entity.Condition;
 import com.haapyProcess.domain.condition.repository.ConditionRepository;
 import com.haapyProcess.domain.family.dto.AddFamilyRequest;
@@ -45,7 +43,6 @@ public class FamilyService {
     private final FamilyRepository familyRepository;
     private final MemberRepository memberRepository;
     private final MemberService memberService; // 현재 로그인한 내 정보 가져오기용
-    private final RiskAnalysisService riskAnalysisService;
     private final HealthConditionRepository healthConditionRepository;
     private final ConditionRepository conditionRepository;
     private final LocationRepository locationRepository;
@@ -110,7 +107,7 @@ public class FamilyService {
         }).toList();
     }
 
-    // 2-2. 가족 상세 조회 (위험도 + 지역 + 알림 시간 전부 포함)
+    // 2-2. 가족 상세 조회 (프로필 + 지역 + 알림 시간). 외부 날씨 API는 호출하지 않는다.
     @Transactional(readOnly = true)
     public FamilyMemberResponse getFamilyDetail(Long familyId) {
         Member me = memberService.getCurrentMember();
@@ -125,19 +122,6 @@ public class FamilyService {
         List<String> conditionNames = relative.getHealthConditions().stream()
                 .map(hc -> hc.getCondition().getConditionName())
                 .toList();
-
-        // 날씨 위험도 분석 (가족이 위치 미등록이거나 기상청 에러 시 방어)
-        RiskAnalysisResult riskResult;
-        try {
-            riskResult = riskAnalysisService.analyzeRiskForMember(relative);
-        } catch (Exception e) {
-            riskResult = new RiskAnalysisResult(false, null);
-        }
-
-        List<String> causeDiseaseNames = riskResult.getRiskDetails() == null ? List.of()
-                : riskResult.getRiskDetails().stream()
-                    .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
-                    .toList();
 
         List<LocationResponse> locations = locationRepository.findAllByMember(relative).stream()
                 .map(LocationResponse::from)
@@ -154,8 +138,6 @@ public class FamilyService {
                 .age(age)
                 .isAlertEnabled(family.isAlertEnabled())
                 .healthConditionNames(conditionNames)
-                .isRisk(riskResult.isRisk())
-                .causeDiseaseNames(causeDiseaseNames)
                 .locations(locations)
                 .alerts(alerts)
                 .build();

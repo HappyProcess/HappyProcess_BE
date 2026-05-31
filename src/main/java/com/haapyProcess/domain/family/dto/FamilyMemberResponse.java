@@ -30,12 +30,6 @@ public class FamilyMemberResponse {
     @Schema(description = "가족이 가진 질병 이름 목록", example = "[\"관절염\", \"고혈압\"]")
     private List<String> healthConditionNames;
 
-    @Schema(description = "현재 가족이 사는 동네 날씨 기준 위험 여부", example = "true")
-    private boolean isRisk;
-
-    @Schema(description = "위험 기준을 초과한 원인 질병", example = "[\"관절염\"]")
-    private List<String> causeDiseaseNames;
-
     // --- 지역 및 알림 시간 정보 (조회/수정용) ---
     @Schema(description = "가족이 등록한 지역(집/직장) 목록")
     private List<LocationResponse> locations;

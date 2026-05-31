@@ -6,6 +6,8 @@ import com.haapyProcess.domain.alert.repository.AlertRepository;
 import com.haapyProcess.domain.alert.repository.NotificationHistoryRepository;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.service.RiskAnalysisService;
+import com.haapyProcess.domain.family.entity.Family;
+import com.haapyProcess.domain.family.repository.FamilyRepository;
 import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class NotificationScheduler {
     private final AlertRepository alertRepository;
     private final NotificationHistoryRepository historyRepository;
     private final RiskAnalysisService riskAnalysisService;
+    private final FamilyRepository familyRepository;
 
     /**
      * 매 분 50초에 실행되는 스케줄러 (알람 시각 10초 전 선처리)
@@ -56,11 +59,15 @@ public class NotificationScheduler {
             LocationType locationType = alert.getEffectiveLocationType();
 
             try {
+                // 1. 알림 주인 본인의 위험도 분석 → 본인 알림함에 저장
                 RiskAnalysisResult result = riskAnalysisService.analyzeRiskForMemberAt(targetMember, locationType);
-
                 if (result.isRisk()) {
-                    saveNotificationHistory(targetMember, result, alertMoment, locationType);
+                    saveNotificationHistory(targetMember, result, alertMoment, locationType, null);
                 }
+
+                // 2. 이 알림 주인(targetMember)을 가족으로 등록하고 알림을 켜둔 사람들에게도 전파.
+                //    가족 알림은 가족(relative) 본인의 알림 시각·지역 설정을 그대로 따른다.
+                fanOutToFamilyRegistrants(targetMember, result, alertMoment, locationType);
 
             } catch (Exception e) {
                 log.error("회원 ID {} 알림 발송 중 오류 발생: {}", targetMember.getMemberId(), e.getMessage());
@@ -69,10 +76,32 @@ public class NotificationScheduler {
     }
 
     /**
-     * 알림 기록을 예쁘게 포장해서 DB에 저장하는 헬퍼 메서드.
-     * createdAt은 실제 적재 시각이 아닌 알람이 울려야 할 시각(alertMoment)으로 세팅.
+     * targetMember(가족 본인)의 위험 분석 결과를, 그를 가족으로 등록하고 알림을 켜둔
+     * 모든 사용자(registrant)의 알림함에 [가족 - 이름] 형태로 적재한다.
      */
-    private void saveNotificationHistory(Member member, RiskAnalysisResult result, LocalDateTime alertMoment, LocationType locationType) {
+    private void fanOutToFamilyRegistrants(Member relative, RiskAnalysisResult result,
+                                           LocalDateTime alertMoment, LocationType locationType) {
+        if (!result.isRisk()) {
+            return;
+        }
+        List<Family> registrations = familyRepository.findAllByRelativeAndIsAlertEnabledTrue(relative);
+        for (Family family : registrations) {
+            try {
+                saveNotificationHistory(family.getUser(), result, alertMoment, locationType, relative.getName());
+            } catch (Exception e) {
+                log.error("가족 알림 전파 실패 (수신자 {} / 가족 {}): {}",
+                        family.getUser().getMemberId(), relative.getMemberId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 알림 기록을 DB에 저장하는 헬퍼 메서드.
+     * createdAt은 실제 적재 시각이 아닌 알람이 울려야 할 시각(alertMoment)으로 세팅.
+     * relativeName이 null이면 본인 알림, 값이 있으면 해당 가족 기준 알림이다.
+     */
+    private void saveNotificationHistory(Member receiver, RiskAnalysisResult result, LocalDateTime alertMoment,
+                                         LocationType locationType, String relativeName) {
 
         String diseaseNamesStr = result.getRiskDetails().stream()
                 .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
@@ -89,10 +118,11 @@ public class NotificationScheduler {
                 .distinct()
                 .collect(Collectors.joining(", "));
 
-        String message = String.format("[%s] %s 수치가 위험 기준을 초과했어요.", diseaseNamesStr, factorNamesStr);
+        String prefix = (relativeName != null && !relativeName.isBlank()) ? "[가족 - " + relativeName + "] " : "";
+        String message = String.format("%s[%s] %s 수치가 위험 기준을 초과했어요.", prefix, diseaseNamesStr, factorNamesStr);
 
         NotificationHistory history = NotificationHistory.builder()
-                .member(member)
+                .member(receiver)
                 .diseaseIds(diseaseIdsStr)
                 .diseaseNames(diseaseNamesStr)
                 .factorNames(factorNamesStr)
@@ -100,9 +130,11 @@ public class NotificationScheduler {
                 .isRead(false)
                 .createdAt(alertMoment)
                 .locationType(locationType)
+                .relativeName(relativeName)
                 .build();
 
         historyRepository.save(history);
-        log.info("회원 ID {}에게 위험 알림 발송 완료: {}", member.getMemberId(), diseaseNamesStr);
+        log.info("회원 ID {}에게 위험 알림 발송 완료 (대상: {}): {}",
+                receiver.getMemberId(), relativeName == null ? "본인" : relativeName, diseaseNamesStr);
     }
 }

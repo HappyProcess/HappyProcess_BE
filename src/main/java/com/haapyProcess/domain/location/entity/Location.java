@@ -29,4 +29,8 @@ public class Location {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "AREA_NO")
     private Region region;
+
+    public void updateRegion(Region region) {
+        this.region = region;
+    }
 }

@@ -10,6 +10,7 @@ import com.haapyProcess.domain.analysis.service.RiskAnalysisService;
 import com.haapyProcess.domain.condition.entity.Condition;
 import com.haapyProcess.domain.condition.repository.ConditionRepository;
 import com.haapyProcess.domain.family.dto.AddFamilyRequest;
+import com.haapyProcess.domain.family.dto.FamilyListResponse;
 import com.haapyProcess.domain.family.dto.FamilyMemberResponse;
 import com.haapyProcess.domain.family.entity.Family;
 import com.haapyProcess.domain.family.repository.FamilyRepository;
@@ -73,57 +74,81 @@ public class FamilyService {
         return familyRepository.save(family).getFamilyId();
     }
 
-    // 2. 가족 목록 조회 (위험도 + 지역 + 알림 시간 포함)
+    // 2-1. 가족 목록 조회 (가벼운 버전: 이름 + 질병 + 알림 시간만)
     @Transactional(readOnly = true)
-    public List<FamilyMemberResponse> getMyFamilies() {
+    public List<FamilyListResponse> getMyFamilies() {
         Member me = memberService.getCurrentMember();
         List<Family> families = familyRepository.findAllByUser(me);
 
         return families.stream().map(family -> {
             Member relative = family.getRelative();
 
-            int age = relative.getBirth() != null
-                    ? Period.between(relative.getBirth(), LocalDate.now()).getYears()
-                    : 0;
-
             List<String> conditionNames = relative.getHealthConditions().stream()
                     .map(hc -> hc.getCondition().getConditionName())
                     .toList();
 
-            // 날씨 위험도 분석 (가족이 위치 미등록이거나 기상청 에러 시 방어)
-            RiskAnalysisResult riskResult;
-            try {
-                riskResult = riskAnalysisService.analyzeRiskForMember(relative);
-            } catch (Exception e) {
-                riskResult = new RiskAnalysisResult(false, null);
-            }
-
-            List<String> causeDiseaseNames = riskResult.getRiskDetails() == null ? List.of()
-                    : riskResult.getRiskDetails().stream()
-                        .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
-                        .toList();
-
-            List<LocationResponse> locations = locationRepository.findAllByMember(relative).stream()
-                    .map(LocationResponse::from)
+            List<String> alertTimes = alertRepository.findAllByMemberOrderByAlertTimeAsc(relative).stream()
+                    .map(Alert::getAlertTime)
                     .toList();
 
-            List<AlertResponse> alerts = alertRepository.findAllByMemberOrderByAlertTimeAsc(relative).stream()
-                    .map(AlertResponse::from)
-                    .toList();
-
-            return FamilyMemberResponse.builder()
+            return FamilyListResponse.builder()
                     .familyId(family.getFamilyId())
-                    .relativeId(relative.getMemberId())
                     .name(relative.getName())
-                    .age(age)
-                    .isAlertEnabled(family.isAlertEnabled())
                     .healthConditionNames(conditionNames)
-                    .isRisk(riskResult.isRisk())
-                    .causeDiseaseNames(causeDiseaseNames)
-                    .locations(locations)
-                    .alerts(alerts)
+                    .alertTimes(alertTimes)
                     .build();
         }).toList();
+    }
+
+    // 2-2. 가족 상세 조회 (위험도 + 지역 + 알림 시간 전부 포함)
+    @Transactional(readOnly = true)
+    public FamilyMemberResponse getFamilyDetail(Long familyId) {
+        Member me = memberService.getCurrentMember();
+        Family family = familyRepository.findByFamilyIdAndUser(familyId, me)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        Member relative = family.getRelative();
+
+        int age = relative.getBirth() != null
+                ? Period.between(relative.getBirth(), LocalDate.now()).getYears()
+                : 0;
+
+        List<String> conditionNames = relative.getHealthConditions().stream()
+                .map(hc -> hc.getCondition().getConditionName())
+                .toList();
+
+        // 날씨 위험도 분석 (가족이 위치 미등록이거나 기상청 에러 시 방어)
+        RiskAnalysisResult riskResult;
+        try {
+            riskResult = riskAnalysisService.analyzeRiskForMember(relative);
+        } catch (Exception e) {
+            riskResult = new RiskAnalysisResult(false, null);
+        }
+
+        List<String> causeDiseaseNames = riskResult.getRiskDetails() == null ? List.of()
+                : riskResult.getRiskDetails().stream()
+                    .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
+                    .toList();
+
+        List<LocationResponse> locations = locationRepository.findAllByMember(relative).stream()
+                .map(LocationResponse::from)
+                .toList();
+
+        List<AlertResponse> alerts = alertRepository.findAllByMemberOrderByAlertTimeAsc(relative).stream()
+                .map(AlertResponse::from)
+                .toList();
+
+        return FamilyMemberResponse.builder()
+                .familyId(family.getFamilyId())
+                .relativeId(relative.getMemberId())
+                .name(relative.getName())
+                .age(age)
+                .isAlertEnabled(family.isAlertEnabled())
+                .healthConditionNames(conditionNames)
+                .isRisk(riskResult.isRisk())
+                .causeDiseaseNames(causeDiseaseNames)
+                .locations(locations)
+                .alerts(alerts)
+                .build();
     }
 
     // 3. 가족 건강 상태(질환) 수정 (덮어쓰기)

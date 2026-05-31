@@ -2,20 +2,23 @@ package com.haapyProcess.domain.analysis.controller;
 
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.service.RiskAnalysisService;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.member.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Analysis", description = "질병 위험도 분석 API")
 @RestController
-@RequestMapping("/api/analysis")
+@RequestMapping("/api/v1/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
 
@@ -53,10 +56,14 @@ public class AnalysisController {
     @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (토큰 만료 또는 없음)")
     @ApiResponse(responseCode = "500", description = "외부 공공데이터 API 연동 중 서버 장애 발생")
     @GetMapping("/risk-status")
-    public ResponseEntity<RiskAnalysisResult> getLiveRiskStatus() {
+    public ResponseEntity<RiskAnalysisResult> getLiveRiskStatus(
+            @Parameter(description = "분석 기준 위치 (HOME: 집, WORK: 직장/학교). 생략 시 집 우선 폴백")
+            @RequestParam(required = false) LocationType locationType) {
         Member currentMember = memberService.getCurrentMember();
 
-        RiskAnalysisResult result = riskAnalysisService.analyzeRiskForMember(currentMember);
+        RiskAnalysisResult result = (locationType != null)
+                ? riskAnalysisService.analyzeRiskForMemberAt(currentMember, locationType)
+                : riskAnalysisService.analyzeRiskForMember(currentMember);
 
         return ResponseEntity.ok(result);
     }

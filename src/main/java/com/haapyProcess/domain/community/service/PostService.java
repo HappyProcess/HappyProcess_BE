@@ -3,6 +3,7 @@ package com.haapyProcess.domain.community.service;
 import com.haapyProcess.domain.community.dto.PostCreateRequest;
 import com.haapyProcess.domain.community.dto.PostDetailResponse;
 import com.haapyProcess.domain.community.dto.PostListResponse;
+import com.haapyProcess.domain.community.dto.PostUpdateRequest;
 import com.haapyProcess.domain.community.dto.CommentResponse;
 import com.haapyProcess.domain.community.entity.Post;
 import com.haapyProcess.domain.community.entity.PostCondition;
@@ -31,15 +32,10 @@ public class PostService {
     private final ConditionRepository conditionRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
-
     private final FileUploader fileUploader;
 
-    /**
-     * [1. 게시글 작성 로직]
-     */
     @Transactional
     public Long createPost(Member currentMember, PostCreateRequest request) {
-
         Post post = Post.builder()
                 .member(currentMember)
                 .title(request.getTitle())
@@ -48,75 +44,27 @@ public class PostService {
 
         if (request.getImages() != null && !request.getImages().isEmpty()) {
             List<String> uploadedUrls = fileUploader.uploadFiles(request.getImages());
-
             for (String url : uploadedUrls) {
-                PostImage postImage = PostImage.builder()
-                        .post(post)
-                        .imageUrl(url)
-                        .build();
-                post.getPostImages().add(postImage);
+                post.getPostImages().add(PostImage.builder().post(post).imageUrl(url).build());
             }
         }
 
         if (request.getConditionIds() != null && !request.getConditionIds().isEmpty()) {
             List<Condition> conditions = conditionRepository.findAllById(request.getConditionIds());
             for (Condition condition : conditions) {
-                PostCondition postCondition = PostCondition.builder()
-                        .post(post)
-                        .condition(condition)
-                        .build();
-                post.getPostConditions().add(postCondition);
+                post.getPostConditions().add(PostCondition.builder().post(post).condition(condition).build());
             }
         }
 
         return postRepository.save(post).getPostId();
     }
 
-    /**
-     * [2. 게시글 목록 조회 로직 (필터링 적용)]
-     */
-    @Transactional(readOnly = true)
-    public Page<PostListResponse> getPosts(boolean isFree, List<Long> conditionIds, Pageable pageable) {
-        Page<Post> postPage;
-
-        if (isFree) {
-            postPage = postRepository.findFreePosts(pageable);
-        } else if (conditionIds != null && !conditionIds.isEmpty()) {
-            postPage = postRepository.findPostsByConditionIds(conditionIds, pageable);
-        } else {
-            postPage = postRepository.findAll(pageable);
-        }
-
-        return postPage.map(post -> {
-            boolean hasImage = !post.getPostImages().isEmpty();
-            List<String> categories = post.getPostConditions().stream()
-                    .map(pc -> pc.getCondition().getConditionName())
-                    .collect(Collectors.toList());
-
-            return PostListResponse.builder()
-                    .postId(post.getPostId())
-                    .title(post.getTitle())
-                    .writerName(post.getMember().getName())
-                    .viewCount(post.getViewCount())
-                    .likeCount(post.getLikeCount())
-                    .commentCount(post.getCommentCount())
-                    .createdAt(post.getCreatedAt())
-                    .hasImage(hasImage)
-                    .categories(categories)
-                    .build();
-        });
-    }
-
-    /**
-     * [3. 게시글 상세 조회 로직]
-     */
     @Transactional
     public PostDetailResponse getPostDetail(Member currentMember, Long postId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글을 찾을 수 없습니다."));
 
         post.addViewCount();
-
         boolean isLikedByMe = postLikeRepository.existsByPostAndMember(post, currentMember);
 
         List<String> categories = post.getPostConditions().stream()
@@ -150,5 +98,104 @@ public class PostService {
                 .imageUrls(imageUrls)
                 .comments(comments)
                 .build();
+    }
+
+    @Transactional
+    public void updatePost(Member currentMember, Long postId, PostUpdateRequest request) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글을 찾을 수 없습니다."));
+
+        if (!post.getMember().getMemberId().equals(currentMember.getMemberId())) {
+            throw new IllegalArgumentException("게시글 수정 권한이 없습니다.");
+        }
+
+        post.updatePost(request.getTitle(), request.getContent());
+
+        post.clearConditions();
+        if (request.getConditionIds() != null && !request.getConditionIds().isEmpty()) {
+            List<Condition> conditions = conditionRepository.findAllById(request.getConditionIds());
+            for (Condition condition : conditions) {
+                post.getPostConditions().add(PostCondition.builder().post(post).condition(condition).build());
+            }
+        }
+
+        if (request.getDeleteImageIds() != null && !request.getDeleteImageIds().isEmpty()) {
+            List<PostImage> imagesToRemove = post.getPostImages().stream()
+                    .filter(img -> request.getDeleteImageIds().contains(img.getPostImageId()))
+                    .collect(Collectors.toList());
+
+            for (PostImage img : imagesToRemove) {
+                post.removeImage(img);
+            }
+        }
+
+        if (request.getNewImages() != null && !request.getNewImages().isEmpty()) {
+            List<String> uploadedUrls = fileUploader.uploadFiles(request.getNewImages());
+            for (String url : uploadedUrls) {
+                post.getPostImages().add(PostImage.builder().post(post).imageUrl(url).build());
+            }
+        }
+    }
+
+    @Transactional
+    public void deletePost(Member currentMember, Long postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게시글을 찾을 수 없습니다."));
+
+        if (!post.getMember().getMemberId().equals(currentMember.getMemberId())) {
+            throw new IllegalArgumentException("게시글 삭제 권한이 없습니다.");
+        }
+
+        postRepository.delete(post);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> getPosts(boolean isFree, List<Long> conditionIds, Pageable pageable) {
+        Page<Post> postPage;
+        if (isFree) {
+            postPage = postRepository.findFreePosts(pageable);
+        } else if (conditionIds != null && !conditionIds.isEmpty()) {
+            postPage = postRepository.findPostsByConditionIds(conditionIds, pageable);
+        } else {
+            postPage = postRepository.findAll(pageable);
+        }
+        return mapToPostListResponse(postPage);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> searchPosts(String keyword, Pageable pageable) {
+        return mapToPostListResponse(postRepository.searchPosts(keyword, pageable));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> getMyPosts(Member currentMember, Pageable pageable) {
+        return mapToPostListResponse(postRepository.findAllByMember(currentMember, pageable));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponse> getMyLikedPosts(Member currentMember, Pageable pageable) {
+        return mapToPostListResponse(postRepository.findLikedPostsByMember(currentMember, pageable));
+    }
+
+
+    private Page<PostListResponse> mapToPostListResponse(Page<Post> postPage) {
+        return postPage.map(post -> {
+            boolean hasImage = !post.getPostImages().isEmpty();
+            List<String> categories = post.getPostConditions().stream()
+                    .map(pc -> pc.getCondition().getConditionName())
+                    .collect(Collectors.toList());
+
+            return PostListResponse.builder()
+                    .postId(post.getPostId())
+                    .title(post.getTitle())
+                    .writerName(post.getMember().getName())
+                    .viewCount(post.getViewCount())
+                    .likeCount(post.getLikeCount())
+                    .commentCount(post.getCommentCount())
+                    .createdAt(post.getCreatedAt())
+                    .hasImage(hasImage)
+                    .categories(categories)
+                    .build();
+        });
     }
 }

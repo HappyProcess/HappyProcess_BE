@@ -18,10 +18,6 @@ public class LikeService {
     private final PostLikeRepository postLikeRepository;
     private final PostRepository postRepository;
 
-    /**
-     * 공감 누르기 / 취소하기 토글(Toggle)
-     * 반환값: 누른 후의 최종 상태 (true = 공감됨, false = 공감 취소됨)
-     */
     @Transactional
     public boolean toggleLike(Member currentMember, Long postId) {
         Post post = postRepository.findById(postId)

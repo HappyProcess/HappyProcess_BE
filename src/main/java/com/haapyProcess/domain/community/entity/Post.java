@@ -77,4 +77,14 @@ public class Post {
     public void removeLikeCount() { if(this.likeCount > 0) this.likeCount--; }
     public void addCommentCount() { this.commentCount++; }
     public void removeCommentCount() { if(this.commentCount > 0) this.commentCount--; }
+    public void updatePost(String title, String content) {
+        this.title = title;
+        this.content = content;
+    }
+    public void clearConditions() {
+        this.postConditions.clear();
+    }
+    public void removeImage(PostImage postImage) {
+        this.postImages.remove(postImage);
+    }
 }

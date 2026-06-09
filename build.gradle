@@ -37,6 +37,9 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 
+    // 4-1. SMS (CoolSMS / SOLAPI)
+    implementation 'net.nurigo:sdk:4.3.0'
+
     // 5. Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'

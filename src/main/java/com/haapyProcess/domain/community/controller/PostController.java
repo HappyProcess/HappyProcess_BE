@@ -36,6 +36,7 @@ public class PostController {
     private final CommentService commentService;
 
     private final MemberService memberService;
+    private final com.haapyProcess.global.util.FileUploader fileUploader;
 
     // 1. 게시글 관련 API (생성, 목록 조회, 상세 조회)
     @Operation(
@@ -67,7 +68,10 @@ public class PostController {
     public ResponseEntity<Long> createPost(@ModelAttribute PostCreateRequest request) {
         Member currentMember = memberService.getCurrentMember();
 
-        Long postId = postService.createPost(currentMember, request);
+        // 이미지 업로드(외부 호출)는 트랜잭션 밖에서 먼저 처리 — DB 커넥션을 외부 응답 대기에 묶지 않기 위함
+        List<String> imageUrls = fileUploader.uploadFiles(request.getImages());
+
+        Long postId = postService.createPost(currentMember, request, imageUrls);
         return ResponseEntity.ok(postId);
     }
 
@@ -268,7 +272,11 @@ public class PostController {
             @ModelAttribute PostUpdateRequest request) {
 
         Member currentMember = memberService.getCurrentMember();
-        postService.updatePost(currentMember, postId, request);
+
+        // 새 이미지 업로드(외부 호출)는 트랜잭션 밖에서 먼저 처리
+        List<String> newImageUrls = fileUploader.uploadFiles(request.getNewImages());
+
+        postService.updatePost(currentMember, postId, request, newImageUrls);
         return ResponseEntity.ok().build();
     }
 

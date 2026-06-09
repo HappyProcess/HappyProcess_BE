@@ -63,6 +63,7 @@ public class AuthService {
                 .pw(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .birth(request.getBirth())
+                .phoneNumber(request.getPhoneNumber())
                 .build();
         memberRepository.save(member);
 

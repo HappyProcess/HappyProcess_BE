@@ -35,6 +35,10 @@ public class Member {
     @Column(name = "BIRTH")
     private LocalDate birth;
 
+    // 위험 알림 문자 수신용 휴대폰 번호 (하이픈 없이 저장, 선택 입력)
+    @Column(name = "PHONE_NUMBER", length = 20)
+    private String phoneNumber;
+
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Location> locations = new ArrayList<>();
@@ -51,12 +55,19 @@ public class Member {
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HealthCondition> healthConditions = new ArrayList<>();
 
-    public void updateProfile(String name, LocalDate birth) {
+    public void updateProfile(String name, LocalDate birth, String phoneNumber) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }
         if (birth != null) {
             this.birth = birth;
         }
+        if (phoneNumber != null && !phoneNumber.isBlank()) {
+            this.phoneNumber = phoneNumber;
+        }
+    }
+
+    public boolean hasPhoneNumber() {
+        return phoneNumber != null && !phoneNumber.isBlank();
     }
 }

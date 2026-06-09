@@ -32,6 +32,7 @@ public class NotificationScheduler {
     private final NotificationHistoryRepository historyRepository;
     private final RiskAnalysisService riskAnalysisService;
     private final FamilyRepository familyRepository;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     /**
      * 매 분 50초에 실행되는 스케줄러 (알람 시각 10초 전 선처리)
@@ -136,5 +137,9 @@ public class NotificationScheduler {
         historyRepository.save(history);
         log.info("회원 ID {}에게 위험 알림 발송 완료 (대상: {}): {}",
                 receiver.getMemberId(), relativeName == null ? "본인" : relativeName, diseaseNamesStr);
+
+        // 트랜잭션 커밋 후 비동기로 문자 발송 (수신자 본인/가족 모두)
+        eventPublisher.publishEvent(new com.haapyProcess.domain.alert.event.NotificationCreatedEvent(
+                receiver.getMemberId(), receiver.getPhoneNumber(), message));
     }
 }

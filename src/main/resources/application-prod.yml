@@ -34,7 +34,7 @@ jwt:
 supabase:
   url: ${SUPABASE_URL}
   service-key: ${SUPABASE_SERVICE_KEY}
-  bucket: ${SUPABASE_BUCKET:post-images}
+  bucket: ${SUPABASE_BUCKET:image}
 
 weather:
   api:

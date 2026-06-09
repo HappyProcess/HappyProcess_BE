@@ -38,7 +38,7 @@ public class SignUpRequest {
 
     @Schema(description = "휴대폰 번호 (선택, 하이픈 없이 숫자만)", example = "01012345678",
             requiredMode = Schema.RequiredMode.NOT_REQUIRED, nullable = true)
-    @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "휴대폰 번호는 하이픈 없이 숫자만 입력해주세요. (예: 01012345678)")
+    @Pattern(regexp = "^$|^01[016789]\\d{7,8}$", message = "휴대폰 번호는 하이픈 없이 숫자만 입력해주세요. (예: 01012345678)")
     private String phoneNumber;
 
     @Schema(description = "기본 알림 시간 (선택, HH:mm 형식)", example = "08:00",

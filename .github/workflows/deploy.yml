@@ -59,6 +59,10 @@ jobs:
                   WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
                   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
                   SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+                  COOLSMS_ENABLED: ${{ secrets.COOLSMS_ENABLED }}
+                  COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
+                  COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
+                  COOLSMS_SENDER_NUMBER: ${{ secrets.COOLSMS_SENDER_NUMBER }}
                 ports:
                   - "8080:8080"
                 restart: always

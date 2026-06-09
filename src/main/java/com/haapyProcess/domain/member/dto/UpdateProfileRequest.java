@@ -18,6 +18,6 @@ public class UpdateProfileRequest {
     private LocalDate birth;
 
     @Schema(description = "휴대폰 번호 (하이픈 없이 숫자만)", example = "01012345678")
-    @Pattern(regexp = "^01[016789]\\d{7,8}$", message = "휴대폰 번호는 하이픈 없이 숫자만 입력해주세요. (예: 01012345678)")
+    @Pattern(regexp = "^$|^01[016789]\\d{7,8}$", message = "휴대폰 번호는 하이픈 없이 숫자만 입력해주세요. (예: 01012345678)")
     private String phoneNumber;
 }

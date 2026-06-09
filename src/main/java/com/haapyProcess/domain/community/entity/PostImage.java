@@ -20,7 +20,7 @@ public class PostImage {
     @JoinColumn(name = "POST_ID", nullable = false)
     private Post post;
 
-    // 로컬 폴더에 저장된 이미지의 접근 주소
+    // Supabase Storage에 저장된 이미지의 public 접근 URL
     @Column(name = "IMAGE_URL", nullable = false, length = 500)
     private String imageUrl;
 }

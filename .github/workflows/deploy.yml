@@ -63,6 +63,7 @@ jobs:
                   COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
                   COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
                   COOLSMS_SENDER_NUMBER: ${{ secrets.COOLSMS_SENDER_NUMBER }}
+                  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
                 ports:
                   - "8080:8080"
                 restart: always

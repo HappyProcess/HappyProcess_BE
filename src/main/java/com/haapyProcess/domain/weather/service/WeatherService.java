@@ -23,6 +23,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
@@ -47,54 +51,85 @@ public class WeatherService {
     @Value("${weather.api.urls.living}")
     private String livingBaseUrl;
 
+    // 외부 기상 API 4종을 동시에 호출하기 위한 전용 스레드풀
+    private final ExecutorService weatherExecutor = Executors.newFixedThreadPool(8);
+
+    // areaNo별 통합 기상 데이터 TTL 캐시 (외부 API가 느리고 데이터는 분 단위로만 바뀌므로 단기 캐시)
+    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000L;
+    private final Map<String, CacheEntry> weatherCache = new ConcurrentHashMap<>();
+
+    private record CacheEntry(WeatherResponseDto data, long expiresAt) {
+        boolean isValid() {
+            return System.currentTimeMillis() < expiresAt;
+        }
+    }
+
     /**
-     * 프론트엔드 제공용 통합 기상 데이터 조회 (단기예보, 미세먼지, 꽃가루, 자외선)
+     * 프론트엔드 제공용 통합 기상 데이터 조회 (단기예보, 미세먼지, 꽃가루, 자외선).
+     * 외부 API 4종을 병렬 호출하고, 결과를 areaNo별로 단기 캐시한다.
      */
     public WeatherResponseDto getCombinedWeatherData(String areaNo) {
+        CacheEntry cached = weatherCache.get(areaNo);
+        if (cached != null && cached.isValid()) {
+            return cached.data();
+        }
+
         Region region = regionRepository.findById(areaNo)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CITY));
 
         log.info("통합 기상 정보 수집 요청 - 지역명: {}, 행정구역코드: {}", region.getDong(), areaNo);
 
-        List<WeatherHourlyDto> hourlyList = new ArrayList<>();
-        try {
-            hourlyList = getHourlyForecastList(region.getNx(), region.getNy());
-        } catch (Exception e) {
-            log.warn("단기예보 수집 실패 (nx:{}, ny:{}): {}", region.getNx(), region.getNy(), e.getMessage());
-        }
+        // 1~4. 서로 독립적인 외부 API 호출을 병렬로 실행 (순차 합산 지연 → 최대값 수준으로 단축)
+        CompletableFuture<List<WeatherHourlyDto>> forecastFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return getHourlyForecastList(region.getNx(), region.getNy());
+            } catch (Exception e) {
+                log.warn("단기예보 수집 실패 (nx:{}, ny:{}): {}", region.getNx(), region.getNy(), e.getMessage());
+                return new ArrayList<WeatherHourlyDto>();
+            }
+        }, weatherExecutor);
+
+        CompletableFuture<AirKoreaItemDto> dustFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                if (region.getStationName() != null && !region.getStationName().isBlank()) {
+                    return getRealTimeFineDust(region.getStationName());
+                }
+                log.warn("미세먼지 수집 보류: DB에 측정소명(stationName)이 존재하지 않습니다. (areaNo: {})", areaNo);
+            } catch (Exception e) {
+                log.warn("미세먼지 API 통신 실패: {}", e.getMessage());
+            }
+            return null;
+        }, weatherExecutor);
+
+        CompletableFuture<String> pollenFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return getPinePollenRiskWithFallback(areaNo);
+            } catch (Exception e) {
+                log.warn("꽃가루 API 통신 실패: {}", e.getMessage());
+                return "0";
+            }
+        }, weatherExecutor);
+
+        CompletableFuture<String> uvFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return getUvRiskWithFallback(areaNo);
+            } catch (Exception e) {
+                log.warn("자외선 API 통신 실패: {}", e.getMessage());
+                return "0";
+            }
+        }, weatherExecutor);
+
+        CompletableFuture.allOf(forecastFuture, dustFuture, pollenFuture, uvFuture).join();
+
+        List<WeatherHourlyDto> hourlyList = forecastFuture.join();
+        AirKoreaItemDto dust = dustFuture.join();
+        String pollen = pollenFuture.join();
+        String uv = uvFuture.join();
 
         WeatherHourlyDto currentForecast = hourlyList.isEmpty() ?
                 WeatherHourlyDto.builder().temperature("-").condition("알 수 없음").build() : hourlyList.get(0);
 
-        // 2. 미세먼지 조회
-        AirKoreaItemDto dust = null;
-        try {
-            if (region.getStationName() != null && !region.getStationName().isBlank()) {
-                dust = getRealTimeFineDust(region.getStationName());
-            } else {
-                log.warn("미세먼지 수집 보류: DB에 측정소명(stationName)이 존재하지 않습니다. (areaNo: {})", areaNo);
-            }
-        } catch (Exception e) {
-            log.warn("미세먼지 API 통신 실패: {}", e.getMessage());
-        }
-
-        // 3. 소나무 꽃가루 위험도 조회
-        String pollen = "0";
-        try {
-            pollen = getPinePollenRiskWithFallback(areaNo);
-        } catch (Exception e) {
-            log.warn("꽃가루 API 통신 실패: {}", e.getMessage());
-        }
-
-        // 4. 자외선 위험도 조회
-        String uv = "0";
-        try {
-            uv = getUvRiskWithFallback(areaNo);
-        } catch (Exception e) {
-            log.warn("자외선 API 통신 실패: {}", e.getMessage());
-        }
-
-        return WeatherResponseDto.builder()
+        WeatherResponseDto result = WeatherResponseDto.builder()
                 .regionName(region.getDong())
                 .temperature(currentForecast.getTemperature())
                 .humidity(currentForecast.getHumidity())
@@ -107,6 +142,9 @@ public class WeatherService {
                 .uvRiskLevel(uv)
                 .hourlyForecasts(hourlyList)
                 .build();
+
+        weatherCache.put(areaNo, new CacheEntry(result, System.currentTimeMillis() + CACHE_TTL_MILLIS));
+        return result;
     }
 
     /**

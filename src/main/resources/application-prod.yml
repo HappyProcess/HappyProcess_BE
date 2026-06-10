@@ -17,6 +17,7 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_batch_fetch_size: 100  # LAZY 연관 로딩을 IN 절로 묶어 N+1 완화
 
   servlet:
     multipart:

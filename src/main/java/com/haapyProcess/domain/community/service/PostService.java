@@ -14,7 +14,6 @@ import com.haapyProcess.domain.community.repository.PostRepository;
 import com.haapyProcess.domain.condition.entity.Condition;
 import com.haapyProcess.domain.condition.repository.ConditionRepository;
 import com.haapyProcess.domain.member.entity.Member;
-import com.haapyProcess.global.util.FileUploader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,19 +31,17 @@ public class PostService {
     private final ConditionRepository conditionRepository;
     private final CommentRepository commentRepository;
     private final PostLikeRepository postLikeRepository;
-    private final FileUploader fileUploader;
 
     @Transactional
-    public Long createPost(Member currentMember, PostCreateRequest request) {
+    public Long createPost(Member currentMember, PostCreateRequest request, List<String> uploadedImageUrls) {
         Post post = Post.builder()
                 .member(currentMember)
                 .title(request.getTitle())
                 .content(request.getContent())
                 .build();
 
-        if (request.getImages() != null && !request.getImages().isEmpty()) {
-            List<String> uploadedUrls = fileUploader.uploadFiles(request.getImages());
-            for (String url : uploadedUrls) {
+        if (uploadedImageUrls != null) {
+            for (String url : uploadedImageUrls) {
                 post.getPostImages().add(PostImage.builder().post(post).imageUrl(url).build());
             }
         }
@@ -101,7 +98,7 @@ public class PostService {
     }
 
     @Transactional
-    public void updatePost(Member currentMember, Long postId, PostUpdateRequest request) {
+    public void updatePost(Member currentMember, Long postId, PostUpdateRequest request, List<String> newImageUrls) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게시글을 찾을 수 없습니다."));
 
@@ -129,9 +126,8 @@ public class PostService {
             }
         }
 
-        if (request.getNewImages() != null && !request.getNewImages().isEmpty()) {
-            List<String> uploadedUrls = fileUploader.uploadFiles(request.getNewImages());
-            for (String url : uploadedUrls) {
+        if (newImageUrls != null) {
+            for (String url : newImageUrls) {
                 post.getPostImages().add(PostImage.builder().post(post).imageUrl(url).build());
             }
         }

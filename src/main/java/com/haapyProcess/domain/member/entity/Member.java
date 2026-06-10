@@ -39,6 +39,12 @@ public class Member {
     @Column(name = "PHONE_NUMBER", length = 20)
     private String phoneNumber;
 
+    // 문자 알림 수신 동의 여부 (opt-in). 기본은 미수신이며, 마이페이지에서 명시적으로 켜야 발송된다.
+    // 미설정(null)도 미수신으로 간주한다.
+    @Builder.Default
+    @Column(name = "SMS_ENABLED")
+    private Boolean smsEnabled = false;
+
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Location> locations = new ArrayList<>();
@@ -55,7 +61,7 @@ public class Member {
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HealthCondition> healthConditions = new ArrayList<>();
 
-    public void updateProfile(String name, LocalDate birth, String phoneNumber) {
+    public void updateProfile(String name, LocalDate birth, String phoneNumber, Boolean smsEnabled) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }
@@ -65,9 +71,17 @@ public class Member {
         if (phoneNumber != null && !phoneNumber.isBlank()) {
             this.phoneNumber = phoneNumber;
         }
+        if (smsEnabled != null) {
+            this.smsEnabled = smsEnabled;
+        }
     }
 
     public boolean hasPhoneNumber() {
         return phoneNumber != null && !phoneNumber.isBlank();
+    }
+
+    // 미설정(null)은 미수신으로 간주 (opt-in)
+    public boolean isSmsEnabled() {
+        return smsEnabled != null && smsEnabled;
     }
 }

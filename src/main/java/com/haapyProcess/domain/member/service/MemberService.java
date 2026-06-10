@@ -26,7 +26,7 @@ public class MemberService {
     @Transactional
     public void updateMyProfile(UpdateProfileRequest request) {
         Member member = getCurrentMember();
-        member.updateProfile(request.getName(), request.getBirth(), request.getPhoneNumber());
+        member.updateProfile(request.getName(), request.getBirth(), request.getPhoneNumber(), request.getSmsEnabled());
     }
 
     public Member getCurrentMember() {

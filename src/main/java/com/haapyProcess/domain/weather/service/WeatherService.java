@@ -54,6 +54,9 @@ public class WeatherService {
     // 외부 기상 API 4종을 동시에 호출하기 위한 전용 스레드풀
     private final ExecutorService weatherExecutor = Executors.newFixedThreadPool(8);
 
+    // 꽃가루/자외선 폴백 후보(동/구/시)를 병렬 조회하기 위한 별도 풀 (weatherExecutor와 분리하여 중첩 고갈 방지)
+    private final ExecutorService fallbackExecutor = Executors.newFixedThreadPool(8);
+
     // areaNo별 통합 기상 데이터 TTL 캐시 (외부 API가 느리고 데이터는 분 단위로만 바뀌므로 단기 캐시)
     private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000L;
     private final Map<String, CacheEntry> weatherCache = new ConcurrentHashMap<>();
@@ -214,84 +217,74 @@ public class WeatherService {
     }
 
     /**
-     * 소나무 꽃가루 위험도 API 호출 (동 -> 구 -> 시 단위 재귀 탐색)
+     * 소나무 꽃가루 위험도 API 호출 (동/구/시 후보를 병렬 조회 후 가장 구체적인 결과 채택)
      */
     private String getPinePollenRiskWithFallback(String originalAreaNo) {
+        return getLivingIndexInParallel(pollenBaseUrl, "/getPinePollenRiskIdxV3", originalAreaNo, "꽃가루");
+    }
+
+    /**
+     * 자외선 지수 API 호출 (동/구/시 후보를 병렬 조회 후 가장 구체적인 결과 채택)
+     */
+    private String getUvRiskWithFallback(String originalAreaNo) {
+        return getLivingIndexInParallel(livingBaseUrl, "/getUVIdxV4", originalAreaNo, "자외선");
+    }
+
+    /**
+     * 생활기상지수(꽃가루/자외선) 폴백 후보(동->구->시)를 순차가 아닌 병렬로 조회하고,
+     * 데이터가 있는 가장 구체적인 지역(동 우선)의 값을 반환한다.
+     */
+    private String getLivingIndexInParallel(String baseUrl, String path, String originalAreaNo, String label) {
         String baseTime = calculateLivingBaseTime();
-        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(pollenBaseUrl);
+        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(baseUrl);
         factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
+        RestClient client = restClient.mutate().uriBuilderFactory(factory).build();
 
-        String[] targetCodes = generateFallbackCodes(originalAreaNo);
+        String[] targetCodes = generateFallbackCodes(originalAreaNo); // [동, 구, 시] 우선순위
 
+        List<CompletableFuture<String>> futures = new ArrayList<>();
         for (String areaNo : targetCodes) {
-            try {
-                PublicDataResponse<PollenItemDto> response = restClient.mutate().uriBuilderFactory(factory).build()
-                        .get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/getPinePollenRiskIdxV3")
-                                .queryParam("serviceKey", apiKey)
-                                .queryParam("pageNo", 1)
-                                .queryParam("numOfRows", 10)
-                                .queryParam("dataType", "JSON")
-                                .queryParam("areaNo", areaNo)
-                                .queryParam("time", baseTime)
-                                .build())
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<PublicDataResponse<PollenItemDto>>() {});
+            futures.add(CompletableFuture.supplyAsync(
+                    () -> fetchLivingIndexForCode(client, path, areaNo, baseTime, label), fallbackExecutor));
+        }
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-                if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) continue;
-
-                List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
-                if (items == null || items.isEmpty()) continue;
-
-                return extractCurrentLivingIndex(items.get(0), baseTime);
-
-            } catch (Exception e) {
-                log.debug("꽃가루 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
+        // 우선순위(동->구->시) 순으로 값이 있는 첫 결과 채택
+        for (CompletableFuture<String> f : futures) {
+            String value = f.join();
+            if (value != null) {
+                return value;
             }
         }
         return "0";
     }
 
-    /**
-     * 자외선 지수 API 호출 (동 -> 구 -> 시 단위 재귀 탐색 및 일 최고치 추출)
-     */
-    private String getUvRiskWithFallback(String originalAreaNo) {
-        String baseTime = calculateLivingBaseTime();
-        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(livingBaseUrl);
-        factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
+    /** 단일 지역코드에 대한 생활기상지수 조회. 데이터 없으면 null. */
+    private String fetchLivingIndexForCode(RestClient client, String path, String areaNo, String baseTime, String label) {
+        try {
+            PublicDataResponse<PollenItemDto> response = client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path(path)
+                            .queryParam("serviceKey", apiKey)
+                            .queryParam("pageNo", 1)
+                            .queryParam("numOfRows", 10)
+                            .queryParam("dataType", "JSON")
+                            .queryParam("areaNo", areaNo)
+                            .queryParam("time", baseTime)
+                            .build())
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<PublicDataResponse<PollenItemDto>>() {});
 
-        String[] targetCodes = generateFallbackCodes(originalAreaNo);
+            if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) return null;
 
-        for (String areaNo : targetCodes) {
-            try {
-                PublicDataResponse<PollenItemDto> response = restClient.mutate().uriBuilderFactory(factory).build()
-                        .get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/getUVIdxV4")
-                                .queryParam("serviceKey", apiKey)
-                                .queryParam("pageNo", 1)
-                                .queryParam("numOfRows", 10)
-                                .queryParam("dataType", "JSON")
-                                .queryParam("areaNo", areaNo)
-                                .queryParam("time", baseTime)
-                                .build())
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<PublicDataResponse<PollenItemDto>>() {});
+            List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
+            if (items == null || items.isEmpty()) return null;
 
-                if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) continue;
-
-                List<PollenItemDto> items = response.getResponse().getBody().getItems().getItem();
-                if (items == null || items.isEmpty()) continue;
-
-                // 최고치가 아닌 현재 시간대와 일치하는 지수를 추출하여 반환
-                return extractCurrentLivingIndex(items.get(0), baseTime);
-
-            } catch (Exception e) {
-                log.debug("자외선 API 탐색 실패 (areaNo: {}), 상위 지역으로 재시도합니다.", areaNo);
-            }
+            return extractCurrentLivingIndex(items.get(0), baseTime);
+        } catch (Exception e) {
+            log.debug("{} API 탐색 실패 (areaNo: {})", label, areaNo);
+            return null;
         }
-        return "0";
     }
 
     private String extractCurrentLivingIndex(PollenItemDto item, String baseTimeStr) {

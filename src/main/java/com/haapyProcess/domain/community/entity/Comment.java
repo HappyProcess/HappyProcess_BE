@@ -7,7 +7,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "COMMENT")
+@Table(name = "COMMENT", indexes = @Index(name = "idx_comment_post", columnList = "POST_ID"))
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

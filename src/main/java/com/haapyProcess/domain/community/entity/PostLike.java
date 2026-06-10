@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "POST_LIKE")
+@Table(name = "POST_LIKE", indexes = {
+        @Index(name = "idx_postlike_post_member", columnList = "POST_ID, MEMBER_ID"),
+        @Index(name = "idx_postlike_member", columnList = "MEMBER_ID")
+})
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

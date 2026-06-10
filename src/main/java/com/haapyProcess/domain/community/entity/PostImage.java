@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "POST_IMAGE")
+@Table(name = "POST_IMAGE", indexes = @Index(name = "idx_postimage_post", columnList = "POST_ID"))
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

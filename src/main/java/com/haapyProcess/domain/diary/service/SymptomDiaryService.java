@@ -4,11 +4,11 @@ import com.haapyProcess.domain.condition.entity.Condition;
 import com.haapyProcess.domain.condition.repository.ConditionRepository;
 import com.haapyProcess.domain.diary.dto.DiaryRequest;
 import com.haapyProcess.domain.diary.dto.DiaryResponse;
+import com.haapyProcess.domain.diary.entity.DiaryWeather;
 import com.haapyProcess.domain.diary.entity.SymptomDiary;
 import com.haapyProcess.domain.diary.entity.SymptomDiaryItem;
 import com.haapyProcess.domain.diary.repository.SymptomDiaryRepository;
 import com.haapyProcess.domain.location.entity.Location;
-import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.repository.LocationRepository;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.member.service.MemberService;
@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -97,36 +98,42 @@ public class SymptomDiaryService {
     }
 
     /**
-     * 사용자의 HOME 위치(없으면 첫 위치) 기준 날씨를 수집해 일기에 스냅샷으로 채운다.
-     * 위치가 없거나 외부 API 실패 시 날씨 없이 저장한다.
+     * 사용자의 모든 위치(HOME/WORK)에 대해 날씨를 수집해 일기에 위치별 스냅샷으로 채운다.
+     * 위치가 없거나 외부 API 실패 시 해당 위치는 건너뛰고 저장한다.
      */
     private void applyWeatherSnapshot(Member member, SymptomDiary diary) {
-        String areaNo = resolveAreaNo(member);
-        if (areaNo == null) {
-            log.info("날씨 스냅샷 보류: 등록된 위치가 없습니다. (memberId: {})", member.getMemberId());
-            return;
-        }
-        try {
-            WeatherResponseDto w = weatherService.getCombinedWeatherData(areaNo);
-            diary.applyWeatherSnapshot(
-                    w.getRegionName(), w.getTemperature(), w.getHumidity(), w.getWeatherCondition(),
-                    w.getPm10Value(), w.getPm10Grade(), w.getPm25Value(), w.getPm25Grade(),
-                    w.getPollenRiskLevel(), w.getUvRiskLevel());
-        } catch (Exception e) {
-            log.warn("날씨 스냅샷 수집 실패, 날씨 없이 저장합니다. (memberId: {}): {}", member.getMemberId(), e.getMessage());
-        }
-    }
-
-    private String resolveAreaNo(Member member) {
         List<Location> locations = locationRepository.findAllByMember(member);
         if (locations.isEmpty()) {
-            return null;
+            log.info("날씨 스냅샷 보류: 등록된 위치가 없습니다. (memberId: {})", member.getMemberId());
+            diary.replaceWeathers(List.of());
+            return;
         }
-        return locations.stream()
-                .filter(l -> l.getLocationType() == LocationType.HOME)
-                .findFirst()
-                .orElse(locations.get(0))
-                .getRegion()
-                .getAreaNo();
+
+        List<DiaryWeather> snapshots = new ArrayList<>();
+        for (Location loc : locations) {
+            if (loc.getRegion() == null) {
+                continue;
+            }
+            try {
+                WeatherResponseDto w = weatherService.getCombinedWeatherData(loc.getRegion().getAreaNo());
+                snapshots.add(DiaryWeather.builder()
+                        .locationType(loc.getLocationType())
+                        .regionName(w.getRegionName())
+                        .temperature(w.getTemperature())
+                        .humidity(w.getHumidity())
+                        .weatherCondition(w.getWeatherCondition())
+                        .pm10Value(w.getPm10Value())
+                        .pm10Grade(w.getPm10Grade())
+                        .pm25Value(w.getPm25Value())
+                        .pm25Grade(w.getPm25Grade())
+                        .pollenRiskLevel(w.getPollenRiskLevel())
+                        .uvRiskLevel(w.getUvRiskLevel())
+                        .build());
+            } catch (Exception e) {
+                log.warn("날씨 스냅샷 수집 실패 (memberId: {}, locationType: {}): {}",
+                        member.getMemberId(), loc.getLocationType(), e.getMessage());
+            }
+        }
+        diary.replaceWeathers(snapshots);
     }
 }

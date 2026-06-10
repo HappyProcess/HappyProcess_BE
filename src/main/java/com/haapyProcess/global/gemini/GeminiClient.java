@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,18 @@ public class GeminiClient {
      * @return 생성된 텍스트
      */
     public String generate(String prompt) {
+        return doGenerate(prompt, false);
+    }
+
+    /**
+     * JSON 형식으로 응답을 강제(responseMimeType=application/json)하여 생성한다.
+     * @return JSON 문자열
+     */
+    public String generateJson(String prompt) {
+        return doGenerate(prompt, true);
+    }
+
+    private String doGenerate(String prompt, boolean jsonMode) {
         if (apiKey == null || apiKey.isBlank()) {
             log.error("Gemini API 키가 설정되지 않았습니다. (gemini.api-key / GEMINI_API_KEY)");
             throw new CustomException(ErrorCode.REPORT_GENERATION_FAILED);
@@ -46,11 +59,11 @@ public class GeminiClient {
 
         String url = apiUrl + "/models/" + model + ":generateContent?key=" + apiKey;
 
-        Map<String, Object> body = Map.of(
-                "contents", List.of(Map.of(
-                        "parts", List.of(Map.of("text", prompt))
-                ))
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))));
+        if (jsonMode) {
+            body.put("generationConfig", Map.of("responseMimeType", "application/json"));
+        }
 
         try {
             GeminiResponse response = restClient.post()

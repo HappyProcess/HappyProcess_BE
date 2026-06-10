@@ -86,8 +86,10 @@ class SymptomDiaryServiceTest {
         assertThat(res.getSymptoms()).hasSize(1);
         assertThat(res.getSymptoms().get(0).getConditionName()).isEqualTo("천식");
         assertThat(res.getSymptoms().get(0).getIntensity()).isEqualTo(3);
-        assertThat(res.getWeather().getRegionName()).isEqualTo("역삼동");
-        assertThat(res.getWeather().getPm10Value()).isEqualTo("80");
+        assertThat(res.getWeathers()).hasSize(1);
+        assertThat(res.getWeathers().get(0).getLocationType()).isEqualTo(LocationType.HOME);
+        assertThat(res.getWeathers().get(0).getRegionName()).isEqualTo("역삼동");
+        assertThat(res.getWeathers().get(0).getPm10Value()).isEqualTo("80");
         verify(weatherService).getCombinedWeatherData("1168010100");
     }
 
@@ -104,7 +106,7 @@ class SymptomDiaryServiceTest {
 
         DiaryResponse res = service.upsertDiary(request(date, null, 1L, 2));
 
-        assertThat(res.getWeather().getRegionName()).isNull();
+        assertThat(res.getWeathers()).isEmpty();
         verify(weatherService, never()).getCombinedWeatherData(any());
     }
 }

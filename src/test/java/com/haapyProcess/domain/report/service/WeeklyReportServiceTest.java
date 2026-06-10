@@ -1,7 +1,9 @@
 package com.haapyProcess.domain.report.service;
 
+import com.haapyProcess.domain.diary.entity.DiaryWeather;
 import com.haapyProcess.domain.diary.entity.SymptomDiary;
 import com.haapyProcess.domain.diary.repository.SymptomDiaryRepository;
+import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.member.entity.Member;
 import com.haapyProcess.domain.member.service.MemberService;
 import com.haapyProcess.domain.report.dto.WeeklyReportResponse;
@@ -45,7 +47,6 @@ class WeeklyReportServiceTest {
     @DisplayName("weekStart 파라미터는 해당 주의 월요일로 정규화되어 조회된다")
     void normalizesToMonday() {
         when(memberService.getCurrentMember()).thenReturn(member);
-        // 2025-06-04는 수요일 -> 그 주 월요일 2025-06-02
         LocalDate wednesday = LocalDate.of(2025, 6, 4);
         LocalDate expectedMonday = LocalDate.of(2025, 6, 2);
         assertThat(expectedMonday.getDayOfWeek()).isEqualTo(DayOfWeek.MONDAY);
@@ -54,14 +55,15 @@ class WeeklyReportServiceTest {
         when(reportRepository.findByMemberAndWeekStartDate(member, expectedMonday)).thenReturn(Optional.empty());
         when(diaryRepository.findByMemberAndEntryDateBetween(member, expectedMonday, expectedMonday.plusDays(6)))
                 .thenReturn(List.of(diary));
-        when(geminiClient.generate(any())).thenReturn("리포트 본문");
+        when(geminiClient.generateJson(any())).thenReturn(
+                "{\"summary\":\"리포트 요약\",\"patterns\":[],\"solutions\":[]}");
         when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         WeeklyReportResponse res = service.generateWeeklyReport(wednesday);
 
         assertThat(res.getWeekStartDate()).isEqualTo(expectedMonday);
         assertThat(res.getWeekEndDate()).isEqualTo(expectedMonday.plusDays(6));
-        assertThat(res.getContent()).isEqualTo("리포트 본문");
+        assertThat(res.getSummary()).isEqualTo("리포트 요약");
     }
 
     @Test
@@ -71,13 +73,13 @@ class WeeklyReportServiceTest {
         LocalDate monday = LocalDate.of(2025, 6, 2);
         WeeklyReport cached = WeeklyReport.builder()
                 .member(member).weekStartDate(monday).weekEndDate(monday.plusDays(6))
-                .content("캐시된 리포트").build();
+                .content("{\"summary\":\"캐시된 리포트\"}").build();
         when(reportRepository.findByMemberAndWeekStartDate(member, monday)).thenReturn(Optional.of(cached));
 
         WeeklyReportResponse res = service.generateWeeklyReport(monday);
 
-        assertThat(res.getContent()).isEqualTo("캐시된 리포트");
-        verify(geminiClient, never()).generate(any());
+        assertThat(res.getSummary()).isEqualTo("캐시된 리포트");
+        verify(geminiClient, never()).generateJson(any());
         verify(reportRepository, never()).save(any());
     }
 
@@ -97,26 +99,27 @@ class WeeklyReportServiceTest {
     }
 
     @Test
-    @DisplayName("프롬프트에 증상·날씨 데이터가 포함된다")
+    @DisplayName("프롬프트에 위치별 날씨·증상·메모 데이터가 포함된다")
     void promptIncludesDiaryData() {
         when(memberService.getCurrentMember()).thenReturn(member);
         LocalDate monday = LocalDate.of(2025, 6, 2);
         SymptomDiary diary = SymptomDiary.builder()
                 .member(member).entryDate(monday).memo("두통이 있었음").build();
-        diary.applyWeatherSnapshot("강남구", "25", "60", "맑음",
-                "80", "나쁨", "40", "보통", "3", "5");
+        DiaryWeather home = DiaryWeather.builder()
+                .locationType(LocationType.HOME).regionName("강남구").pm10Value("80").build();
+        diary.replaceWeathers(List.of(home));
 
         when(reportRepository.findByMemberAndWeekStartDate(member, monday)).thenReturn(Optional.empty());
         when(diaryRepository.findByMemberAndEntryDateBetween(member, monday, monday.plusDays(6)))
                 .thenReturn(List.of(diary));
-        when(geminiClient.generate(any())).thenReturn("결과");
+        when(geminiClient.generateJson(any())).thenReturn("{\"summary\":\"요약\"}");
         when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         service.generateWeeklyReport(monday);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(geminiClient).generate(captor.capture());
+        verify(geminiClient).generateJson(captor.capture());
         String prompt = captor.getValue();
-        assertThat(prompt).contains("강남구").contains("두통이 있었음").contains("미세먼지=80");
+        assertThat(prompt).contains("강남구").contains("두통이 있었음").contains("미세먼지=80").contains("HOME");
     }
 }

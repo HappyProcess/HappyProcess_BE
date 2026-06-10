@@ -46,7 +46,8 @@ public class AnalysisController {
                 | **riskDetails** | 위험 기준을 초과한 질병별 상세 정보 배열 | List<Object> | isRisk가 false면 오지 않음 |
                 | └ diseaseId | 원인 질병 ID | Long | |
                 | └ diseaseName | 원인 질병 이름 | String | |
-                | └ factorGuides | 날씨 원인 및 맞춤 행동 강령 배열 | List<Object> | |
+                | └ weatherScore | 질환별 날씨 점수 (0=최악, 100=최고) | int | 위험 요인이 없어도 점수는 제공 |
+                | └ factorGuides | 날씨 원인 및 맞춤 행동 강령 배열 | List<Object> | 위험 요인이 없으면 빈 배열 |
                 | &nbsp;&nbsp;&nbsp;└ factorName | 초과한 날씨 요인 (예: 미세먼지) | String | |
                 | &nbsp;&nbsp;&nbsp;└ guide | 행동 추천 가이드 | String | |
                 """

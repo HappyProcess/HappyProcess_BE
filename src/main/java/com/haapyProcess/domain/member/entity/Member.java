@@ -45,6 +45,12 @@ public class Member {
     @Column(name = "SMS_ENABLED")
     private Boolean smsEnabled = false;
 
+    // 강수 비선호 설정 (질병 없는 사용자의 강수 불편도 점수에 사용). 미설정(null)은 NONE으로 간주한다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "PRECIP_PREFERENCE", length = 10)
+    @Builder.Default
+    private PrecipPreference precipPreference = PrecipPreference.NONE;
+
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Location> locations = new ArrayList<>();
@@ -61,7 +67,8 @@ public class Member {
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HealthCondition> healthConditions = new ArrayList<>();
 
-    public void updateProfile(String name, LocalDate birth, String phoneNumber, Boolean smsEnabled) {
+    public void updateProfile(String name, LocalDate birth, String phoneNumber, Boolean smsEnabled,
+                              PrecipPreference precipPreference) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }
@@ -74,6 +81,14 @@ public class Member {
         if (smsEnabled != null) {
             this.smsEnabled = smsEnabled;
         }
+        if (precipPreference != null) {
+            this.precipPreference = precipPreference;
+        }
+    }
+
+    // 미설정(null)은 NONE으로 간주
+    public PrecipPreference getPrecipPreferenceOrDefault() {
+        return precipPreference != null ? precipPreference : PrecipPreference.NONE;
     }
 
     public boolean hasPhoneNumber() {

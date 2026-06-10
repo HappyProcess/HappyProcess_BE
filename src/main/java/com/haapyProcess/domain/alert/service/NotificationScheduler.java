@@ -104,16 +104,22 @@ public class NotificationScheduler {
     private void saveNotificationHistory(Member receiver, RiskAnalysisResult result, LocalDateTime alertMoment,
                                          LocationType locationType, String relativeName) {
 
-        String diseaseNamesStr = result.getRiskDetails().stream()
+        // riskDetails에는 점수 산정을 위해 위험하지 않은(원인 요인이 없는) 질환도 포함되므로,
+        // 알림 본문에는 실제 위험 요인이 있는 질환만 사용한다.
+        List<RiskAnalysisResult.RiskDetail> riskyDetails = result.getRiskDetails().stream()
+                .filter(detail -> detail.getFactorGuides() != null && !detail.getFactorGuides().isEmpty())
+                .toList();
+
+        String diseaseNamesStr = riskyDetails.stream()
                 .map(RiskAnalysisResult.RiskDetail::getDiseaseName)
                 .collect(Collectors.joining(", "));
 
-        String diseaseIdsStr = result.getRiskDetails().stream()
+        String diseaseIdsStr = riskyDetails.stream()
                 .map(detail -> String.valueOf(detail.getDiseaseId()))
                 .collect(Collectors.joining(","));
 
         // 위험 판정된 모든 질환의 원인 요인(미세먼지/초미세먼지 등)을 중복 없이 모은다.
-        String factorNamesStr = result.getRiskDetails().stream()
+        String factorNamesStr = riskyDetails.stream()
                 .flatMap(detail -> detail.getFactorGuides().stream())
                 .map(RiskAnalysisResult.FactorGuide::getFactorName)
                 .distinct()

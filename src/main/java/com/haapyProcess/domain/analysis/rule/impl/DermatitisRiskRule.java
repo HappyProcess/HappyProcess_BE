@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -37,5 +39,23 @@ public class DermatitisRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        double humidity = weather.getParsedHumidity();
+
+        // 습도 낮음(30% 미만)과 높음(80% 이상)은 반대 방향 조건이라 별도 처리한다.
+        double humidityScore;
+        if (humidity < 30) {
+            humidityScore = WeatherScoreTables.humidityDry(humidity) * 0.30;
+        } else if (humidity >= 80) {
+            humidityScore = WeatherScoreTables.humidityWet(humidity) * 0.20;
+        } else {
+            humidityScore = 0;
+        }
+
+        double raw = WeatherScoreTables.uv(weather.getParsedUvRisk()) * 0.50 + humidityScore;
+        return 100 - (int) Math.round(raw);
     }
 }

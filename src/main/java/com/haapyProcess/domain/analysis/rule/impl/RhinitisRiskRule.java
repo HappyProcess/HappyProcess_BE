@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -43,5 +45,14 @@ public class RhinitisRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        double raw = WeatherScoreTables.pollen(weather.getParsedPollenRisk()) * 0.45
+                + WeatherScoreTables.pm10(weather.getParsedPm10Value()) * 0.20
+                + WeatherScoreTables.pm25(weather.getParsedPm25Value()) * 0.20
+                + WeatherScoreTables.humidityDry(weather.getParsedHumidity()) * 0.15;
+        return 100 - (int) Math.round(raw);
     }
 }

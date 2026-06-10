@@ -3,11 +3,14 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class ElderlyRiskRule implements DiseaseRiskRule {
@@ -42,5 +45,16 @@ public class ElderlyRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        double changeVal = Math.max(weather.getTempDropIn6Hours(), weather.getTempRiseIn6Hours());
+        // 고령 강수형태는 빙판길 낙상 위험 중심으로 코드 2(비/눈), 3(눈)만 적용
+        double raw = WeatherScoreTables.temp(weather.getParsedCurrentTemp()) * 0.30
+                + WeatherScoreTables.tempChange(changeVal) * 0.30
+                + WeatherScoreTables.pm10(weather.getParsedPm10Value()) * 0.20
+                + WeatherScoreTables.precipSensitive(weather.getParsedCurrentPty(), Set.of(2, 3)) * 0.20;
+        return 100 - (int) Math.round(raw);
     }
 }

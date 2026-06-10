@@ -1,6 +1,7 @@
 package com.haapyProcess.domain.member.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -23,4 +24,7 @@ public class UpdateProfileRequest {
 
     @Schema(description = "문자 알림 수신 여부 (null이면 변경 안 함)", example = "true")
     private Boolean smsEnabled;
+
+    @Schema(description = "강수 비선호 설정 (NONE/RAIN/SNOW, null이면 변경 안 함)", example = "RAIN")
+    private PrecipPreference precipPreference;
 }

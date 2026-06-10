@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "POST_CONDITION")
+@Table(name = "POST_CONDITION", indexes = {
+        @Index(name = "idx_postcondition_post", columnList = "POST_ID"),
+        @Index(name = "idx_postcondition_condition", columnList = "CONDITION_ID")
+})
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

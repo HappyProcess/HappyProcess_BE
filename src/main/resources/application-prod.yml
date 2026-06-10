@@ -42,6 +42,11 @@ coolsms:
   api-secret: ${COOLSMS_API_SECRET:}
   sender-number: ${COOLSMS_SENDER_NUMBER:}
 
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.1-flash-lite}
+  api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta}
+
 weather:
   api:
     key: ${WEATHER_API_KEY}

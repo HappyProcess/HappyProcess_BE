@@ -33,9 +33,8 @@ public class ReportController {
     @PostMapping("/weekly/generate")
     public ResponseEntity<WeeklyReportResponse> generate(
             @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
-            @RequestParam(defaultValue = "false") boolean force) {
-        return ResponseEntity.ok(reportService.generateWeeklyReport(weekStart, force));
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        return ResponseEntity.ok(reportService.generateWeeklyReport(weekStart));
     }
 
     @Operation(

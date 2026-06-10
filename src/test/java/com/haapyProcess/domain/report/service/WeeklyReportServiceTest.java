@@ -59,7 +59,7 @@ class WeeklyReportServiceTest {
                 "{\"summary\":\"리포트 요약\",\"patterns\":[],\"solutions\":[]}");
         when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        WeeklyReportResponse res = service.generateWeeklyReport(wednesday, false);
+        WeeklyReportResponse res = service.generateWeeklyReport(wednesday);
 
         assertThat(res.getWeekStartDate()).isEqualTo(expectedMonday);
         assertThat(res.getWeekEndDate()).isEqualTo(expectedMonday.plusDays(6));
@@ -76,32 +76,11 @@ class WeeklyReportServiceTest {
                 .content("{\"summary\":\"캐시된 리포트\"}").build();
         when(reportRepository.findByMemberAndWeekStartDate(member, monday)).thenReturn(Optional.of(cached));
 
-        WeeklyReportResponse res = service.generateWeeklyReport(monday, false);
+        WeeklyReportResponse res = service.generateWeeklyReport(monday);
 
         assertThat(res.getSummary()).isEqualTo("캐시된 리포트");
         verify(geminiClient, never()).generateJson(any());
         verify(reportRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("force=true면 기존 리포트를 새로 생성해 덮어쓴다")
-    void forceRegeneratesOverExistingReport() {
-        when(memberService.getCurrentMember()).thenReturn(member);
-        LocalDate monday = LocalDate.of(2025, 6, 2);
-        WeeklyReport existing = WeeklyReport.builder()
-                .member(member).weekStartDate(monday).weekEndDate(monday.plusDays(6))
-                .content("구버전 평문 리포트").build();
-        when(reportRepository.findByMemberAndWeekStartDate(member, monday)).thenReturn(Optional.of(existing));
-        when(diaryRepository.findByMemberAndEntryDateBetween(member, monday, monday.plusDays(6)))
-                .thenReturn(List.of(SymptomDiary.builder().member(member).entryDate(monday).build()));
-        when(geminiClient.generateJson(any())).thenReturn("{\"summary\":\"새 구조화 리포트\"}");
-        when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        WeeklyReportResponse res = service.generateWeeklyReport(monday, true);
-
-        assertThat(res.getSummary()).isEqualTo("새 구조화 리포트");
-        verify(geminiClient).generateJson(any());
-        assertThat(existing.getContent()).isEqualTo("{\"summary\":\"새 구조화 리포트\"}");
     }
 
     @Test
@@ -113,7 +92,7 @@ class WeeklyReportServiceTest {
         when(diaryRepository.findByMemberAndEntryDateBetween(eq(member), eq(monday), eq(monday.plusDays(6))))
                 .thenReturn(List.of());
 
-        assertThatThrownBy(() -> service.generateWeeklyReport(monday, false))
+        assertThatThrownBy(() -> service.generateWeeklyReport(monday))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NO_DIARY_FOR_REPORT);
@@ -136,7 +115,7 @@ class WeeklyReportServiceTest {
         when(geminiClient.generateJson(any())).thenReturn("{\"summary\":\"요약\"}");
         when(reportRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        service.generateWeeklyReport(monday, false);
+        service.generateWeeklyReport(monday);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(geminiClient).generateJson(captor.capture());

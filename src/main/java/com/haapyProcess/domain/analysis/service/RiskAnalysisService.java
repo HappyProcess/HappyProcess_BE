@@ -7,6 +7,7 @@ import com.haapyProcess.domain.healthcondition.service.HealthConditionService;
 import com.haapyProcess.domain.location.entity.LocationType;
 import com.haapyProcess.domain.location.service.LocationService;
 import com.haapyProcess.domain.member.entity.Member;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import com.haapyProcess.domain.weather.service.WeatherService;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,7 @@ public class RiskAnalysisService {
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
-        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather, member.getPrecipPreferenceOrDefault());
         result.setRegionName(liveWeather.getRegionName());
         return result;
     }
@@ -59,7 +60,7 @@ public class RiskAnalysisService {
 
         List<HealthCondition> userConditions = healthConditionService.findAllByMember(member);
 
-        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather);
+        RiskAnalysisResult result = analyzeRisk(userConditions, liveWeather, member.getPrecipPreferenceOrDefault());
         result.setRegionName(liveWeather.getRegionName());
         return result;
     }
@@ -79,47 +80,39 @@ public class RiskAnalysisService {
                 w.getWeatherCondition());
     }
 
-    private RiskAnalysisResult analyzeRisk(List<HealthCondition> conditions, WeatherResponseDto weather) {
+    private RiskAnalysisResult analyzeRisk(List<HealthCondition> conditions, WeatherResponseDto weather,
+                                           PrecipPreference precipPreference) {
+        // 평가 대상 규칙 선정: 질환이 없으면 질병없음(0L), 있으면 등록 질환별 규칙
+        List<DiseaseRiskRule> targetRules = new ArrayList<>();
         if (conditions == null || conditions.isEmpty()) {
             DiseaseRiskRule normalRule = ruleMap.get(0L);
-            if (normalRule != null) {
-                List<RiskAnalysisResult.FactorGuide> factors = normalRule.evaluateFactorGuides(weather);
-
-                if (factors != null && !factors.isEmpty()) {
-                    RiskAnalysisResult.RiskDetail detail = new RiskAnalysisResult.RiskDetail(
-                            normalRule.getConditionId(),
-                            normalRule.getDiseaseName(),
-                            factors
-                    );
-                    return new RiskAnalysisResult(true, List.of(detail));
-                }
+            if (normalRule != null) targetRules.add(normalRule);
+        } else {
+            for (HealthCondition healthCondition : conditions) {
+                DiseaseRiskRule rule = ruleMap.get(healthCondition.getCondition().getConditionId());
+                if (rule != null) targetRules.add(rule);
             }
-            return new RiskAnalysisResult(false, null);
         }
 
         List<RiskAnalysisResult.RiskDetail> riskDetails = new ArrayList<>();
+        boolean isRisk = false;
 
-        for (HealthCondition healthCondition : conditions) {
-            Long conditionId = healthCondition.getCondition().getConditionId();
-            DiseaseRiskRule rule = ruleMap.get(conditionId);
-
-            if (rule == null) continue;
-
+        for (DiseaseRiskRule rule : targetRules) {
             List<RiskAnalysisResult.FactorGuide> factors = rule.evaluateFactorGuides(weather);
+            int weatherScore = rule.evaluateWeatherScore(weather, precipPreference);
 
             if (factors != null && !factors.isEmpty()) {
-                riskDetails.add(new RiskAnalysisResult.RiskDetail(
-                        rule.getConditionId(),
-                        rule.getDiseaseName(),
-                        factors
-                ));
+                isRisk = true;
             }
+
+            riskDetails.add(new RiskAnalysisResult.RiskDetail(
+                    rule.getConditionId(),
+                    rule.getDiseaseName(),
+                    weatherScore,
+                    factors == null ? List.of() : factors
+            ));
         }
 
-        if (!riskDetails.isEmpty()) {
-            return new RiskAnalysisResult(true, riskDetails);
-        }
-
-        return new RiskAnalysisResult(false, null);
+        return new RiskAnalysisResult(isRisk, riskDetails.isEmpty() ? null : riskDetails);
     }
 }

@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -39,5 +41,27 @@ public class AsthmaRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        int pm25 = WeatherScoreTables.pm25(weather.getParsedPm25Value());
+        int pm10 = WeatherScoreTables.pm10(weather.getParsedPm10Value());
+        int temp = WeatherScoreTables.temp(weather.getParsedCurrentTemp());
+        double tempChangeVal = Math.max(weather.getTempDropIn6Hours(), weather.getTempRiseIn6Hours());
+        int tempChange = WeatherScoreTables.tempChange(tempChangeVal);
+
+        double raw;
+        int month = java.time.LocalDate.now().getMonthValue();
+        boolean pollenOffSeason = (month == 7 || month == 11 || month == 12 || month == 1 || month == 2);
+
+        if (pollenOffSeason) {
+            // 꽃가루 계수(0.35) 제외 후 나머지 변수를 재정규화 (÷0.65)
+            raw = (pm25 * 0.30 + pm10 * 0.20 + temp * 0.10 + tempChange * 0.05) / 0.65;
+        } else {
+            int pollen = WeatherScoreTables.pollen(weather.getParsedPollenRisk());
+            raw = pollen * 0.35 + pm25 * 0.30 + pm10 * 0.20 + temp * 0.10 + tempChange * 0.05;
+        }
+        return 100 - (int) Math.round(raw);
     }
 }

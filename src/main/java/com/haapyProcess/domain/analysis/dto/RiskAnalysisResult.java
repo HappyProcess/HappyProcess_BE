@@ -26,6 +26,7 @@ public class RiskAnalysisResult {
     public static class RiskDetail {
         private Long diseaseId;
         private String diseaseName;
+        private int weatherScore; // 질환별 날씨 점수 (0=최악, 100=최고)
         private List<FactorGuide> factorGuides;
     }
 

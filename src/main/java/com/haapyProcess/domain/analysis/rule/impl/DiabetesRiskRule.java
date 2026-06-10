@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -35,5 +37,13 @@ public class DiabetesRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        // 당뇨는 폭염(탈수)이 핵심이므로 고온 점수를 사용한다.
+        double raw = WeatherScoreTables.tempHeat(weather.getParsedCurrentTemp()) * 0.65
+                + WeatherScoreTables.humidityWet(weather.getParsedHumidity()) * 0.35;
+        return 100 - (int) Math.round(raw);
     }
 }

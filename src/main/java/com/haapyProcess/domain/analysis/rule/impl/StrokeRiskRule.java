@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
+import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
 import org.springframework.stereotype.Component;
 
@@ -31,5 +33,14 @@ public class StrokeRiskRule implements DiseaseRiskRule {
         }
 
         return guides;
+    }
+
+    @Override
+    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        int tempDrop = WeatherScoreTables.tempChange(weather.getTempDropIn6Hours());
+        int temp = WeatherScoreTables.temp(weather.getParsedCurrentTemp());
+
+        double raw = tempDrop * 0.80 + temp * 0.20;
+        return 100 - (int) Math.round(raw);
     }
 }

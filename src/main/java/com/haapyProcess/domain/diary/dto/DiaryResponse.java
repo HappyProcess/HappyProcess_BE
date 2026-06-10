@@ -1,7 +1,9 @@
 package com.haapyProcess.domain.diary.dto;
 
+import com.haapyProcess.domain.diary.entity.DiaryWeather;
 import com.haapyProcess.domain.diary.entity.SymptomDiary;
 import com.haapyProcess.domain.diary.entity.SymptomDiaryItem;
+import com.haapyProcess.domain.location.entity.LocationType;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -16,11 +18,16 @@ public class DiaryResponse {
     private LocalDate entryDate;
     private String memo;
     private List<SymptomResponse> symptoms;
-    private WeatherSnapshot weather;
+    // 위치(HOME/WORK)별 날씨 스냅샷
+    private List<WeatherSnapshot> weathers;
 
     public static DiaryResponse from(SymptomDiary diary) {
         List<SymptomResponse> symptoms = diary.getItems().stream()
                 .map(SymptomResponse::from)
+                .toList();
+
+        List<WeatherSnapshot> weathers = diary.getWeathers().stream()
+                .map(WeatherSnapshot::from)
                 .toList();
 
         return DiaryResponse.builder()
@@ -28,7 +35,7 @@ public class DiaryResponse {
                 .entryDate(diary.getEntryDate())
                 .memo(diary.getMemo())
                 .symptoms(symptoms)
-                .weather(WeatherSnapshot.from(diary))
+                .weathers(weathers)
                 .build();
     }
 
@@ -51,6 +58,7 @@ public class DiaryResponse {
     @Getter
     @Builder
     public static class WeatherSnapshot {
+        private LocationType locationType;
         private String regionName;
         private String temperature;
         private String humidity;
@@ -62,18 +70,19 @@ public class DiaryResponse {
         private String pollenRiskLevel;
         private String uvRiskLevel;
 
-        static WeatherSnapshot from(SymptomDiary diary) {
+        static WeatherSnapshot from(DiaryWeather w) {
             return WeatherSnapshot.builder()
-                    .regionName(diary.getRegionName())
-                    .temperature(diary.getTemperature())
-                    .humidity(diary.getHumidity())
-                    .weatherCondition(diary.getWeatherCondition())
-                    .pm10Value(diary.getPm10Value())
-                    .pm10Grade(diary.getPm10Grade())
-                    .pm25Value(diary.getPm25Value())
-                    .pm25Grade(diary.getPm25Grade())
-                    .pollenRiskLevel(diary.getPollenRiskLevel())
-                    .uvRiskLevel(diary.getUvRiskLevel())
+                    .locationType(w.getLocationType())
+                    .regionName(w.getRegionName())
+                    .temperature(w.getTemperature())
+                    .humidity(w.getHumidity())
+                    .weatherCondition(w.getWeatherCondition())
+                    .pm10Value(w.getPm10Value())
+                    .pm10Grade(w.getPm10Grade())
+                    .pm25Value(w.getPm25Value())
+                    .pm25Grade(w.getPm25Grade())
+                    .pollenRiskLevel(w.getPollenRiskLevel())
+                    .uvRiskLevel(w.getUvRiskLevel())
                     .build();
         }
     }

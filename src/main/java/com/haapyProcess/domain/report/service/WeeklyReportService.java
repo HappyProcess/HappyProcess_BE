@@ -1,5 +1,6 @@
 package com.haapyProcess.domain.report.service;
 
+import com.haapyProcess.domain.diary.entity.DiaryWeather;
 import com.haapyProcess.domain.diary.entity.SymptomDiary;
 import com.haapyProcess.domain.diary.entity.SymptomDiaryItem;
 import com.haapyProcess.domain.diary.repository.SymptomDiaryRepository;
@@ -40,7 +41,6 @@ public class WeeklyReportService {
         LocalDate weekStart = resolveWeekStart(weekStartParam);
         LocalDate weekEnd = weekStart.plusDays(6);
 
-        // 캐시 히트 시 재생성하지 않음 (비용 절약)
         WeeklyReport existing = reportRepository.findByMemberAndWeekStartDate(member, weekStart).orElse(null);
         if (existing != null) {
             return WeeklyReportResponse.from(existing);
@@ -51,14 +51,14 @@ public class WeeklyReportService {
             throw new CustomException(ErrorCode.NO_DIARY_FOR_REPORT);
         }
 
-        String prompt = buildPrompt(member, weekStart, weekEnd, diaries);
-        String content = geminiClient.generate(prompt);
+        String prompt = buildPrompt(weekStart, weekEnd, diaries);
+        String contentJson = geminiClient.generateJson(prompt);
 
         WeeklyReport report = WeeklyReport.builder()
                 .member(member)
                 .weekStartDate(weekStart)
                 .weekEndDate(weekEnd)
-                .content(content)
+                .content(contentJson)
                 .build();
 
         return WeeklyReportResponse.from(reportRepository.save(report));
@@ -79,37 +79,46 @@ public class WeeklyReportService {
         return base.with(DayOfWeek.MONDAY);
     }
 
-    private String buildPrompt(Member member, LocalDate weekStart, LocalDate weekEnd, List<SymptomDiary> diaries) {
+    private String buildPrompt(LocalDate weekStart, LocalDate weekEnd, List<SymptomDiary> diaries) {
         StringBuilder sb = new StringBuilder();
-        sb.append("당신은 만성질환 사용자의 건강 관리를 돕는 의료 코치입니다. ");
+        sb.append("당신은 만성질환 사용자의 건강 데이터를 분석하는 의료 코치입니다.\n");
         sb.append("아래는 한 사용자가 ").append(weekStart).append("부터 ").append(weekEnd)
-                .append("까지 기록한 증상 일기와 해당 시점의 날씨 데이터입니다.\n");
-        sb.append("이 데이터를 바탕으로 한국어로 주간 건강 리포트를 작성해주세요. ");
-        sb.append("다음을 포함하세요: (1) 이번 주 증상 추세 요약, (2) 날씨(미세먼지·꽃가루·자외선·기온 등)와 증상의 연관성 분석, ");
-        sb.append("(3) 다음 주 관리 조언. 의학적 단정은 피하고 부드럽고 실용적인 톤으로, 400자 내외로 작성하세요. ");
-        sb.append("반드시 마크다운 기호(**, ##, -, * 등) 없이 일반 평문으로만 작성하고, 항목 구분이 필요하면 줄바꿈만 사용하세요.\n\n");
-        sb.append("=== 기록 데이터 ===\n");
+                .append("까지 기록한 증상 일기와, 집(HOME)/직장·학교(WORK) 위치별 날씨 데이터입니다.\n");
+        sb.append("이 데이터를 분석해 '어떤 날씨 조건일 때 어떤 증상이 유독 심해지는지'를 구체적으로 찾아내고, 그에 대한 실천 가능한 솔루션을 제시하세요.\n\n");
 
+        sb.append("반드시 아래 JSON 스키마로만 응답하세요. 코드블록(```)이나 다른 설명 텍스트 없이 순수 JSON만 출력합니다.\n");
+        sb.append("{\n");
+        sb.append("  \"summary\": \"이번 주 전반 추세를 1~2문장으로 요약\",\n");
+        sb.append("  \"patterns\": [ {\"weather\": \"구체적 날씨 조건(가능하면 수치 포함, 예: 미세먼지 나쁨 PM10 80)\", \"symptom\": \"증상 또는 질환명\", \"observation\": \"그 조건에서 증상이 어떻게 나타났는지 강도 등 구체적으로\"} ],\n");
+        sb.append("  \"solutions\": [ {\"target\": \"증상 또는 질환명\", \"action\": \"구체적이고 실천 가능한 조치\"} ]\n");
+        sb.append("}\n");
+        sb.append("규칙: patterns는 데이터에서 실제로 관찰되는 연관만 적고 막연한 일반론은 금지합니다. ");
+        sb.append("데이터가 부족하거나 날씨 변화가 거의 없어 연관을 찾기 어려우면 patterns를 빈 배열로 두고 summary에 그 사실을 적으세요. 모든 문자열은 한국어로 작성합니다.\n\n");
+
+        sb.append("=== 기록 데이터 ===\n");
         for (SymptomDiary d : diaries) {
             sb.append("[").append(d.getEntryDate()).append("]\n");
-            sb.append("  날씨: 지역=").append(nv(d.getRegionName()))
-                    .append(", 기온=").append(nv(d.getTemperature()))
-                    .append(", 습도=").append(nv(d.getHumidity()))
-                    .append(", 상태=").append(nv(d.getWeatherCondition()))
-                    .append(", 미세먼지=").append(nv(d.getPm10Value())).append("(").append(nv(d.getPm10Grade())).append(")")
-                    .append(", 초미세먼지=").append(nv(d.getPm25Value())).append("(").append(nv(d.getPm25Grade())).append(")")
-                    .append(", 꽃가루위험=").append(nv(d.getPollenRiskLevel()))
-                    .append(", 자외선=").append(nv(d.getUvRiskLevel())).append("\n");
             sb.append("  증상: ");
             if (d.getItems().isEmpty()) {
                 sb.append("기록 없음");
             } else {
-                List<String> parts = d.getItems().stream()
-                        .map(this::formatSymptom)
-                        .toList();
-                sb.append(String.join(", ", parts));
+                sb.append(String.join(", ", d.getItems().stream().map(this::formatSymptom).toList()));
             }
             sb.append("\n");
+            if (d.getWeathers().isEmpty()) {
+                sb.append("  날씨: 없음\n");
+            } else {
+                for (DiaryWeather w : d.getWeathers()) {
+                    sb.append("  날씨(").append(w.getLocationType()).append(", ").append(nv(w.getRegionName())).append("): ")
+                            .append("기온=").append(nv(w.getTemperature()))
+                            .append(", 습도=").append(nv(w.getHumidity()))
+                            .append(", 상태=").append(nv(w.getWeatherCondition()))
+                            .append(", 미세먼지=").append(nv(w.getPm10Value())).append("(").append(nv(w.getPm10Grade())).append(")")
+                            .append(", 초미세먼지=").append(nv(w.getPm25Value())).append("(").append(nv(w.getPm25Grade())).append(")")
+                            .append(", 꽃가루위험=").append(nv(w.getPollenRiskLevel()))
+                            .append(", 자외선=").append(nv(w.getUvRiskLevel())).append("\n");
+                }
+            }
             if (d.getMemo() != null && !d.getMemo().isBlank()) {
                 sb.append("  메모: ").append(d.getMemo()).append("\n");
             }

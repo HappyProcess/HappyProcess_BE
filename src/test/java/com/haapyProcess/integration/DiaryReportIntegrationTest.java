@@ -87,10 +87,12 @@ class DiaryReportIntegrationTest {
         WeeklyReportResponse report = reportService.generateWeeklyReport(monday);
 
         System.out.println("\n========= 주간 리포트 (" + report.getWeekStartDate() + " ~ " + report.getWeekEndDate() + ") =========");
-        System.out.println(report.getContent());
+        System.out.println("summary: " + report.getSummary());
+        System.out.println("patterns: " + report.getPatterns());
+        System.out.println("solutions: " + report.getSolutions());
         System.out.println("====================================================\n");
 
-        assertThat(report.getContent()).isNotBlank();
+        assertThat(report.getSummary()).isNotBlank();
         assertThat(report.getWeekStartDate()).isEqualTo(monday);
 
         // 5. 재호출 시 동일 캐시 반환 (재생성 안 함)

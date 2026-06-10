@@ -37,6 +37,7 @@ supabase:
   service-key: ${SUPABASE_SERVICE_KEY}
   bucket: ${SUPABASE_BUCKET:image}
 
+# CoolSMS(SOLAPI) 발송 설정. 값은 GitHub Secret으로 주입되며, 시크릿 변경 시 재배포해야 반영된다.
 coolsms:
   enabled: ${COOLSMS_ENABLED:false}
   api-key: ${COOLSMS_API_KEY:}

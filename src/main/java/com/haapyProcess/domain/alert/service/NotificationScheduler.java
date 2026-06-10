@@ -138,8 +138,10 @@ public class NotificationScheduler {
         log.info("회원 ID {}에게 위험 알림 발송 완료 (대상: {}): {}",
                 receiver.getMemberId(), relativeName == null ? "본인" : relativeName, diseaseNamesStr);
 
-        // 트랜잭션 커밋 후 비동기로 문자 발송 (수신자 본인/가족 모두)
-        eventPublisher.publishEvent(new com.haapyProcess.domain.alert.event.NotificationCreatedEvent(
-                receiver.getMemberId(), receiver.getPhoneNumber(), message));
+        // 트랜잭션 커밋 후 비동기로 문자 발송 (문자 수신을 켜고 번호가 등록된 수신자만)
+        if (receiver.hasPhoneNumber() && receiver.isSmsEnabled()) {
+            eventPublisher.publishEvent(new com.haapyProcess.domain.alert.event.NotificationCreatedEvent(
+                    receiver.getMemberId(), receiver.getPhoneNumber(), message));
+        }
     }
 }

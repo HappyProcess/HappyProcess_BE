@@ -39,6 +39,12 @@ public class Member {
     @Column(name = "PHONE_NUMBER", length = 20)
     private String phoneNumber;
 
+    // 문자 알림 수신 여부. 인앱 알림은 그대로 받되 문자만 끄고 싶을 때 사용.
+    // 기존 회원(null)은 수신(true)으로 간주한다.
+    @Builder.Default
+    @Column(name = "SMS_ENABLED")
+    private Boolean smsEnabled = true;
+
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Location> locations = new ArrayList<>();
@@ -55,7 +61,7 @@ public class Member {
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HealthCondition> healthConditions = new ArrayList<>();
 
-    public void updateProfile(String name, LocalDate birth, String phoneNumber) {
+    public void updateProfile(String name, LocalDate birth, String phoneNumber, Boolean smsEnabled) {
         if (name != null && !name.isBlank()) {
             this.name = name;
         }
@@ -65,9 +71,17 @@ public class Member {
         if (phoneNumber != null && !phoneNumber.isBlank()) {
             this.phoneNumber = phoneNumber;
         }
+        if (smsEnabled != null) {
+            this.smsEnabled = smsEnabled;
+        }
     }
 
     public boolean hasPhoneNumber() {
         return phoneNumber != null && !phoneNumber.isBlank();
+    }
+
+    // 기존 회원(null)은 수신으로 간주
+    public boolean isSmsEnabled() {
+        return smsEnabled == null || smsEnabled;
     }
 }

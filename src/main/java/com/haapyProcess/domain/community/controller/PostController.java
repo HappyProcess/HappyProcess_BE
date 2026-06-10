@@ -281,6 +281,19 @@ public class PostController {
     }
 
     @Operation(
+            summary = "게시글 삭제",
+            description = "작성자 본인만 자신의 게시글을 삭제할 수 있습니다. 삭제 시 게시글에 달린 이미지/댓글/좋아요도 함께 제거됩니다."
+    )
+    @ApiResponse(responseCode = "200", description = "게시글 삭제 성공")
+    @ApiResponse(responseCode = "400", description = "권한 없음 / 게시글을 찾을 수 없음")
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
+        Member currentMember = memberService.getCurrentMember();
+        postService.deletePost(currentMember, postId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(
             summary = "댓글 수정",
             description = "작성자 본인만 자신의 댓글 내용을 수정할 수 있습니다."
     )

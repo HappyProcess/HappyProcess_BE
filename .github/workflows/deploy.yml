@@ -62,7 +62,8 @@ jobs:
                   COOLSMS_ENABLED: ${{ secrets.COOLSMS_ENABLED }}
                   COOLSMS_API_KEY: ${{ secrets.COOLSMS_API_KEY }}
                   COOLSMS_API_SECRET: ${{ secrets.COOLSMS_API_SECRET }}
-                  COOLSMS_SENDER_NUMBER: ${{ secrets.COOLSMS_SENDER_NUMBER }}
+                  # 따옴표 필수: 앞자리 0 전화번호가 YAML octal로 해석되는 것 방지 (01062433711 -> 147470281)
+                  COOLSMS_SENDER_NUMBER: "${{ secrets.COOLSMS_SENDER_NUMBER }}"
                   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
                 ports:
                   - "8080:8080"

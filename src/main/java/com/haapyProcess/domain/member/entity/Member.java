@@ -39,11 +39,11 @@ public class Member {
     @Column(name = "PHONE_NUMBER", length = 20)
     private String phoneNumber;
 
-    // 문자 알림 수신 여부. 인앱 알림은 그대로 받되 문자만 끄고 싶을 때 사용.
-    // 기존 회원(null)은 수신(true)으로 간주한다.
+    // 문자 알림 수신 동의 여부 (opt-in). 기본은 미수신이며, 마이페이지에서 명시적으로 켜야 발송된다.
+    // 미설정(null)도 미수신으로 간주한다.
     @Builder.Default
     @Column(name = "SMS_ENABLED")
-    private Boolean smsEnabled = true;
+    private Boolean smsEnabled = false;
 
     @Builder.Default
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -80,8 +80,8 @@ public class Member {
         return phoneNumber != null && !phoneNumber.isBlank();
     }
 
-    // 기존 회원(null)은 수신으로 간주
+    // 미설정(null)은 미수신으로 간주 (opt-in)
     public boolean isSmsEnabled() {
-        return smsEnabled == null || smsEnabled;
+        return smsEnabled != null && smsEnabled;
     }
 }

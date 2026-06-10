@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -65,17 +67,14 @@ public class NormalRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
-        // 건강 위험도 (공통)
-        double health = WeatherScoreTables.pm10(weather.getParsedPm10Value()) * 0.35
-                + WeatherScoreTables.pm25(weather.getParsedPm25Value()) * 0.35
-                + WeatherScoreTables.temp(weather.getParsedCurrentTemp()) * 0.20
-                + WeatherScoreTables.uv(weather.getParsedUvRisk()) * 0.10;
-
-        // 강수 불편도 (개인 선호 기반 가산점)
-        double precip = WeatherScoreTables.precipNormal(weather.getParsedCurrentPty(), precipPreference) * 0.13;
-
-        double raw = Math.min(health + precip, 100.0);
-        return 100 - (int) Math.round(raw);
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        // 건강 위험도(공통) + 강수 불편도(개인 선호 기반 가산점). 총합은 build()에서 100으로 상한 처리된다.
+        return ScoreBuilder.create()
+                .add("미세먼지", WeatherScoreTables.pm10(weather.getParsedPm10Value()), 0.35)
+                .add("초미세먼지", WeatherScoreTables.pm25(weather.getParsedPm25Value()), 0.35)
+                .add("기온", WeatherScoreTables.temp(weather.getParsedCurrentTemp()), 0.20)
+                .add("자외선", WeatherScoreTables.uv(weather.getParsedUvRisk()), 0.10)
+                .add("강수", WeatherScoreTables.precipNormal(weather.getParsedCurrentPty(), precipPreference), 0.13)
+                .build();
     }
 }

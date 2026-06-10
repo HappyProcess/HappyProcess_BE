@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -49,12 +51,13 @@ public class ChildRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
-        double raw = WeatherScoreTables.pm25(weather.getParsedPm25Value()) * 0.30
-                + WeatherScoreTables.pm10(weather.getParsedPm10Value()) * 0.25
-                + WeatherScoreTables.temp(weather.getParsedCurrentTemp()) * 0.20
-                + WeatherScoreTables.uv(weather.getParsedUvRisk()) * 0.15
-                + WeatherScoreTables.precipSensitive(weather.getParsedCurrentPty(), Set.of(1, 2, 3)) * 0.10;
-        return 100 - (int) Math.round(raw);
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        return ScoreBuilder.create()
+                .add("초미세먼지", WeatherScoreTables.pm25(weather.getParsedPm25Value()), 0.30)
+                .add("미세먼지", WeatherScoreTables.pm10(weather.getParsedPm10Value()), 0.25)
+                .add("기온", WeatherScoreTables.temp(weather.getParsedCurrentTemp()), 0.20)
+                .add("자외선", WeatherScoreTables.uv(weather.getParsedUvRisk()), 0.15)
+                .add("강수", WeatherScoreTables.precipSensitive(weather.getParsedCurrentPty(), Set.of(1, 2, 3)), 0.10)
+                .build();
     }
 }

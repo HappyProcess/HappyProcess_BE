@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -40,9 +42,10 @@ public class DryEyeRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
-        double raw = WeatherScoreTables.humidityDry(weather.getParsedHumidity()) * 0.75
-                + WeatherScoreTables.uv(weather.getParsedUvRisk()) * 0.25;
-        return 100 - (int) Math.round(raw);
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        return ScoreBuilder.create()
+                .add("건조", WeatherScoreTables.humidityDry(weather.getParsedHumidity()), 0.75)
+                .add("자외선", WeatherScoreTables.uv(weather.getParsedUvRisk()), 0.25)
+                .build();
     }
 }

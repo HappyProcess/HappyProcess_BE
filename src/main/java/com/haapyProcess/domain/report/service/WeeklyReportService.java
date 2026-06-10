@@ -36,14 +36,13 @@ public class WeeklyReportService {
      * @param weekStartParam 주차 내 임의의 날짜(월요일로 정규화). null이면 지난 주.
      */
     @Transactional
-    public WeeklyReportResponse generateWeeklyReport(LocalDate weekStartParam, boolean force) {
+    public WeeklyReportResponse generateWeeklyReport(LocalDate weekStartParam) {
         Member member = memberService.getCurrentMember();
         LocalDate weekStart = resolveWeekStart(weekStartParam);
         LocalDate weekEnd = weekStart.plusDays(6);
 
         WeeklyReport existing = reportRepository.findByMemberAndWeekStartDate(member, weekStart).orElse(null);
-        // force가 아니면 캐시 반환. force면 기존 리포트를 새로 생성해 덮어쓴다(구버전 포맷 교체용).
-        if (existing != null && !force) {
+        if (existing != null) {
             return WeeklyReportResponse.from(existing);
         }
 
@@ -54,11 +53,6 @@ public class WeeklyReportService {
 
         String prompt = buildPrompt(weekStart, weekEnd, diaries);
         String contentJson = geminiClient.generateJson(prompt);
-
-        if (existing != null) {
-            existing.updateContent(contentJson);
-            return WeeklyReportResponse.from(reportRepository.save(existing));
-        }
 
         WeeklyReport report = WeeklyReport.builder()
                 .member(member)

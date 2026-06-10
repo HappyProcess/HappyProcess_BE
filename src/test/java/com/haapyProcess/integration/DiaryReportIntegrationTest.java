@@ -84,7 +84,7 @@ class DiaryReportIntegrationTest {
         assertThat(wed.getSymptoms().get(0).getConditionName()).isEqualTo("천식");
 
         // 4. 실제 Gemini로 주간 리포트 생성
-        WeeklyReportResponse report = reportService.generateWeeklyReport(monday, false);
+        WeeklyReportResponse report = reportService.generateWeeklyReport(monday);
 
         System.out.println("\n========= 주간 리포트 (" + report.getWeekStartDate() + " ~ " + report.getWeekEndDate() + ") =========");
         System.out.println("summary: " + report.getSummary());
@@ -96,7 +96,7 @@ class DiaryReportIntegrationTest {
         assertThat(report.getWeekStartDate()).isEqualTo(monday);
 
         // 5. 재호출 시 동일 캐시 반환 (재생성 안 함)
-        WeeklyReportResponse cached = reportService.generateWeeklyReport(monday, false);
+        WeeklyReportResponse cached = reportService.generateWeeklyReport(monday);
         assertThat(cached.getReportId()).isEqualTo(report.getReportId());
     }
 

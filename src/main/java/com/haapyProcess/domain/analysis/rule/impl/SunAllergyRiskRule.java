@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -36,8 +38,9 @@ public class SunAllergyRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
-        double raw = WeatherScoreTables.uv(weather.getParsedUvRisk()) * 1.00;
-        return 100 - (int) Math.round(raw);
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+        return ScoreBuilder.create()
+                .add("자외선", WeatherScoreTables.uv(weather.getParsedUvRisk()), 1.00)
+                .build();
     }
 }

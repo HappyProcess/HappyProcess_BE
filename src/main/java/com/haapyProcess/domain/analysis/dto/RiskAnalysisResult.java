@@ -27,6 +27,7 @@ public class RiskAnalysisResult {
         private Long diseaseId;
         private String diseaseName;
         private int weatherScore; // 질환별 날씨 점수 (0=최악, 100=최고)
+        private List<String> scoreFactors; // 점수를 크게 깎은 주요 날씨 지수 (최대 2개, 영향 큰 순)
         private List<FactorGuide> factorGuides;
     }
 

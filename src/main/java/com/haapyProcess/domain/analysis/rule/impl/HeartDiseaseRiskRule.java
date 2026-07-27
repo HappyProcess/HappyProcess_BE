@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -42,11 +44,12 @@ public class HeartDiseaseRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
         double changeVal = Math.max(weather.getTempDropIn6Hours(), weather.getTempRiseIn6Hours());
-        double raw = WeatherScoreTables.pm25(weather.getParsedPm25Value()) * 0.40
-                + WeatherScoreTables.temp(weather.getParsedCurrentTemp()) * 0.35
-                + WeatherScoreTables.tempChange(changeVal) * 0.25;
-        return 100 - (int) Math.round(raw);
+        return ScoreBuilder.create()
+                .add("초미세먼지", WeatherScoreTables.pm25(weather.getParsedPm25Value()), 0.40)
+                .add("기온", WeatherScoreTables.temp(weather.getParsedCurrentTemp()), 0.35)
+                .add("기온 급변", WeatherScoreTables.tempChange(changeVal), 0.25)
+                .build();
     }
 }

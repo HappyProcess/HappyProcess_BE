@@ -3,6 +3,8 @@ package com.haapyProcess.domain.analysis.rule.impl;
 import com.haapyProcess.domain.analysis.criteria.WeatherRiskCriteria;
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult.FactorGuide;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.ScoreBuilder;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.analysis.score.WeatherScoreTables;
 import com.haapyProcess.domain.member.entity.PrecipPreference;
 import com.haapyProcess.domain.weather.dto.WeatherResponseDto;
@@ -46,15 +48,16 @@ public class PollenAllergyRiskRule implements DiseaseRiskRule {
     }
 
     @Override
-    public int evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
+    public WeatherScore evaluateWeatherScore(WeatherResponseDto weather, PrecipPreference precipPreference) {
         int month = java.time.LocalDate.now().getMonthValue();
         boolean pollenOffSeason = (month == 7 || month == 11 || month == 12 || month == 1 || month == 2);
 
         // 꽃가루 비시즌에는 꽃가루 점수를 0점으로 처리한다.
         int pollen = pollenOffSeason ? 0 : WeatherScoreTables.pollen(weather.getParsedPollenRisk());
 
-        double raw = pollen * 0.90
-                + WeatherScoreTables.humidityDry(weather.getParsedHumidity()) * 0.10;
-        return 100 - (int) Math.round(raw);
+        return ScoreBuilder.create()
+                .add("꽃가루", pollen, 0.90)
+                .add("건조", WeatherScoreTables.humidityDry(weather.getParsedHumidity()), 0.10)
+                .build();
     }
 }

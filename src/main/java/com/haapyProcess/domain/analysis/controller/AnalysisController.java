@@ -47,6 +47,7 @@ public class AnalysisController {
                 | └ diseaseId | 원인 질병 ID | Long | |
                 | └ diseaseName | 원인 질병 이름 | String | |
                 | └ weatherScore | 질환별 날씨 점수 (0=최악, 100=최고) | int | 위험 요인이 없어도 점수는 제공 |
+                | └ scoreFactors | 점수를 크게 깎은 주요 날씨 지수 이름 배열 (예: 초미세먼지) | List<String> | 영향 큰 순, 최대 2개. 양호하면 빈 배열 |
                 | └ factorGuides | 날씨 원인 및 맞춤 행동 강령 배열 | List<Object> | 위험 요인이 없으면 빈 배열 |
                 | &nbsp;&nbsp;&nbsp;└ factorName | 초과한 날씨 요인 (예: 미세먼지) | String | |
                 | &nbsp;&nbsp;&nbsp;└ guide | 행동 추천 가이드 | String | |

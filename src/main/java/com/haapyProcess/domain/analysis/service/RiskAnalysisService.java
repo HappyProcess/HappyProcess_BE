@@ -2,6 +2,7 @@ package com.haapyProcess.domain.analysis.service;
 
 import com.haapyProcess.domain.analysis.dto.RiskAnalysisResult;
 import com.haapyProcess.domain.analysis.rule.DiseaseRiskRule;
+import com.haapyProcess.domain.analysis.score.WeatherScore;
 import com.haapyProcess.domain.healthcondition.entity.HealthCondition;
 import com.haapyProcess.domain.healthcondition.service.HealthConditionService;
 import com.haapyProcess.domain.location.entity.LocationType;
@@ -99,7 +100,7 @@ public class RiskAnalysisService {
 
         for (DiseaseRiskRule rule : targetRules) {
             List<RiskAnalysisResult.FactorGuide> factors = rule.evaluateFactorGuides(weather);
-            int weatherScore = rule.evaluateWeatherScore(weather, precipPreference);
+            WeatherScore weatherScore = rule.evaluateWeatherScore(weather, precipPreference);
 
             if (factors != null && !factors.isEmpty()) {
                 isRisk = true;
@@ -108,7 +109,8 @@ public class RiskAnalysisService {
             riskDetails.add(new RiskAnalysisResult.RiskDetail(
                     rule.getConditionId(),
                     rule.getDiseaseName(),
-                    weatherScore,
+                    weatherScore.getScore(),
+                    weatherScore.getFactors(),
                     factors == null ? List.of() : factors
             ));
         }
